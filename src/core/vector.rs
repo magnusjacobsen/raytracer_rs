@@ -5,16 +5,16 @@ pub struct Vector {
     x: f32,
     y: f32,
     z: f32,
-    magnitude: f32,
+    _magnitude: f32,
 }
 
 impl Vector {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self {x, y, z, magnitude: (x*x + y*y + z*z).sqrt()}
+        Self {x, y, z, _magnitude: (x*x + y*y + z*z).sqrt()}
     }
 
     pub fn zero() -> Self {
-        Self {x: 0.0, y: 0.0, z: 0.0, magnitude: 0.0}
+        Self {x: 0.0, y: 0.0, z: 0.0, _magnitude: 0.0}
     }
 }
 
