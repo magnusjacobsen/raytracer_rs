@@ -2,11 +2,13 @@
     This module is able to scan and parse an equation string,
     and turn it into a expr format.
 */
+use crate::bx;
 
 // omg we have discriminated unions, like in F# :O
 #[derive(PartialEq, Clone, Debug)]
-enum Terminal {
+pub enum Terminal {
     Add,
+    Sub,
     Mul,
     Div,
     Pow,
@@ -18,15 +20,15 @@ enum Terminal {
     Var(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    FNum(f32),
-    FVar(String),
-    FAdd(Box<Expr>, Box<Expr>),
-    FMult(Box<Expr>, Box<Expr>),
-    FDiv(Box<Expr>, Box<Expr>),
-    FExponent(Box<Expr>, i32),
-    FRoot(Box<Expr>, i32),
+    Num(f32),
+    Var(String),
+    Add(Box<Expr>, Box<Expr>),
+    Mul(Box<Expr>, Box<Expr>),
+    Div(Box<Expr>, Box<Expr>),
+    Exponent(Box<Expr>, i32),
+    Root(Box<Expr>, i32),
 }
 
 // helper functions
@@ -54,17 +56,58 @@ fn float_val(c: char) -> f32 {
     int_val(c) as f32
 }
 
-fn _negate(t: Terminal) -> Terminal {
-    match t {
-        Terminal::Int(i)    => Terminal::Int(-i),
-        Terminal::Float(f)  => Terminal::Float(-f),
-        _                   => panic!("Expected a Terminal of Float or Int")
-    }
-}
-
 /*************
     All the various scanner sub functions
 ***************/
+
+fn apply_negates(inp: &[Terminal], mut out: Vec<Terminal>) -> Vec<Terminal> {
+    match inp.len() {
+        0 => return out,
+        1 => {
+            out.push(inp[0].clone());
+            return out
+        },
+        _ => { // check if we have a Subtraction Terminal
+            match &inp[0] {
+                Terminal::Sub => {
+                    // Directly invert if the Term following is a number, otherwise multiply by -1.0
+                    match inp[1] {
+                        Terminal::Float(f) => {
+                            out.push(Terminal::Float(-f));
+                            apply_negates(&inp[2..], out)
+                        },
+                        Terminal::Int(i) => {
+                            out.push(Terminal::Int(-i));
+                            apply_negates(&inp[2..], out)
+                        },
+                        _ => {
+                            out.push(Terminal::Float(-1.0));
+                            out.push(Terminal::Mul);
+                            apply_negates(&inp[1..], out)
+                        }
+                    }
+                }
+                // Cases where there might be an implicit addition-subtraction
+                Terminal::Rpar | Terminal::Int(_) | Terminal::Float(_) | Terminal::Var(_) => {
+                    // add the implicit addition, and then invert the following Terminal with the next recursive call
+                    if let Terminal::Sub = inp[1] {
+                        out.push(inp[0].clone());
+                        out.push(Terminal::Add);
+                        apply_negates(&inp[1..], out)
+                    } else {
+                        out.push(inp[0].clone());
+                        apply_negates(&inp[1..], out)
+                    }
+                },
+                // all other cases
+                x => {
+                    out.push(x.clone());
+                    apply_negates(&inp[1..], out)
+                },
+            }
+        }
+    }
+}
 
 /*
     Scans for a Float
@@ -98,66 +141,72 @@ fn scan_name(cs: &[char], value: String) -> (&[char], String) {
     }
 }
 
-fn scan(cs: &[char], result: &mut Vec<Terminal>) {
+fn scan_rec(cs: &[char], mut result: Vec<Terminal>) -> Vec<Terminal> {
     if cs.len() == 0 {
-        return;
+        return apply_negates(&result[..], vec![]);
     }
 
     match cs[0] {
         '+' => {
             result.push(Terminal::Add);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },
         '*' => {
             result.push(Terminal::Mul);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },
         '^' => {
             result.push(Terminal::Pow);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },        
         '/' => {
             result.push(Terminal::Div);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },
         '(' => {
             result.push(Terminal::Lpar);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },
         ')' => {
             result.push(Terminal::Rpar);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },
         '_' => {
             result.push(Terminal::Root);
-            scan(&cs[1..], result);
+            scan_rec(&cs[1..], result)
         },
         '-' => {
-            result.push(Terminal::Add);
+            //result.push(Terminal::Add);
             // TODO: this does not work!!w
-            result.push(Terminal::Float(-1.0));
-            result.push(Terminal::Mul);
-            scan(&cs[1..], result);
+            //result.push(Terminal::Float(-1.0));
+            //result.push(Terminal::Mul);
+            result.push(Terminal::Sub);
+            scan_rec(&cs[1..], result)
         },
         c if is_digit(c) => {
             let (cs1, t) = scan_num(&cs[1..], int_val(c));
             result.push(t);
-            scan(cs1, result);
+            scan_rec(cs1, result)
         },
-        c if is_blank(c) => scan(&cs[1..], result),
+        c if is_blank(c) => scan_rec(&cs[1..], result),
         c if is_letter(c) => {
             let (cs1, n) = scan_name(&cs[1..], c.to_string());
             result.push(Terminal::Var(n));
-            scan(cs1, result);
+            scan_rec(cs1, result)
         },
         _ => panic!("scan: everything exploded between my hands!!!!")
     }
 }
 
+pub fn scan(s: String) -> Vec<Terminal> {
+    let chars: Vec<_> = s.chars().collect();
+    scan_rec(&chars, vec![])
+}
+
 /*
     Inserts multiply terminal between terms where it has been implicit in string
 */
-fn insert_mult(inp: &[Terminal], result: &mut Vec<Terminal>) {
+fn insert_mult_rec(inp: &[Terminal], mut out: Vec<Terminal>) -> Vec<Terminal> {
     fn first_term(term: &Terminal) -> bool {
         match term {
             Terminal::Float(_)  => true,
@@ -176,19 +225,23 @@ fn insert_mult(inp: &[Terminal], result: &mut Vec<Terminal>) {
         }
     }
     if inp.len() == 0 {
-        return;
+        out
     } else if inp.len() == 1 {
-        result.push(inp[0].clone());
-        return;
+        out.push(inp[0].clone());
+        out
     }
     else if first_term(&inp[0]) && second_term(&inp[1]) {
-        result.push(inp[0].clone());
-        result.push(Terminal::Mul);
-        insert_mult(&inp[1..], result);
+        out.push(inp[0].clone());
+        out.push(Terminal::Mul);
+        insert_mult_rec(&inp[1..], out)
     } else {
-        result.push(inp[0].clone());
-        insert_mult(&inp[1..], result);
+        out.push(inp[0].clone());
+        insert_mult_rec(&inp[1..], out)
     }
+}
+
+pub fn insert_mult(inp: Vec<Terminal>) -> Vec<Terminal> {
+    insert_mult_rec(&inp, vec![])
 }
 
 /* 
@@ -211,7 +264,7 @@ fn e(ts: &[Terminal]) -> ParseIntm {
 fn eopt((ts, in_value): ParseIntm) -> ParseIntm {
     if ts.len() > 0 && ts[0] == Terminal::Add {
         let (ts1, tv) = t(&ts[1..]);
-        eopt((ts1, Expr::FAdd(Box::new(in_value), Box::new(tv))))
+        eopt((ts1, Expr::Add(bx!(in_value), bx!(tv))))
     } else {
         (ts, in_value)
     }
@@ -228,13 +281,11 @@ fn topt((ts, in_value): ParseIntm) -> ParseIntm {
     match ts[0] {
         Terminal::Mul => {
             let (ts1, fv) = f(&ts[1..]);
-            topt((ts1, Expr::FMult(
-                Box::new(in_value), Box::new(fv))))
+            topt((ts1, Expr::Mul(bx!(in_value), bx!(fv))))
         },
         Terminal::Div => {
             let (ts1, fv) = f(&ts[1..]);
-            topt((ts1, Expr::FDiv(
-                Box::new(in_value), Box::new(fv))))
+            topt((ts1, Expr::Div(bx!(in_value), bx!(fv))))
         },
         _ => (ts, in_value)
     }
@@ -250,9 +301,9 @@ fn fopt((ts, in_value): ParseIntm) -> ParseIntm {
     } 
     match (&ts[0], &ts[1]) {
         (Terminal::Pow, Terminal::Int(i))   => 
-            (&ts[2..], Expr::FExponent(Box::new(in_value), *i)),
+            (&ts[2..], Expr::Exponent(bx!(in_value), *i)),
         (Terminal::Root, Terminal::Int(i))  => 
-            (&ts[2..], Expr::FRoot(Box::new(in_value), *i)),
+            (&ts[2..], Expr::Root(bx!(in_value), *i)),
         _  => (ts, in_value),
     }
 }
@@ -260,9 +311,9 @@ fn fopt((ts, in_value): ParseIntm) -> ParseIntm {
 // there is some potential for buggy grammar, if the original string is not well formulated
 fn p(ts: &[Terminal]) -> ParseIntm {
     match &ts[0] {
-        Terminal::Float(f)  => (&ts[1..], Expr::FNum(*f)),
-        Terminal::Int(i)    => (&ts[1..], Expr::FNum(*i as f32)),
-        Terminal::Var(x)    => (&ts[1..], Expr::FVar(x.clone())),
+        Terminal::Float(f)  => (&ts[1..], Expr::Num(*f)),
+        Terminal::Int(i)    => (&ts[1..], Expr::Num(*i as f32)),
+        Terminal::Var(x)    => (&ts[1..], Expr::Var(x.clone())),
         Terminal::Lpar      => {
             let (ts1, ev) = e(&ts[1..]);
             if ts1[0] == Terminal::Rpar {
@@ -276,13 +327,17 @@ fn p(ts: &[Terminal]) -> ParseIntm {
     }
 }
 
-fn parse(ts: &[Terminal]) -> Result<Expr, &str> {
+fn parse_rec(ts: &[Terminal]) -> Expr {
     match e(ts) {
         (ts1, result) if ts1.len() == 0 => {
-            Ok(result)
+            result
         },
-        _ => Err("parse: bad stuff happened!"),
+        _ => panic!("parse_rec: Bad stuff happened"),
     }
+}
+
+pub fn parse(ts: Vec<Terminal>) -> Expr {
+    parse_rec(&ts)
 }
 
 /*
@@ -290,17 +345,8 @@ fn parse(ts: &[Terminal]) -> Result<Expr, &str> {
     Returns an Expr
 */
 pub fn parse_string(s: String) -> Expr {
-    // scan string and create vector of terminals
-    let mut terminals = Vec::new();
-    let cs = s.chars().collect::<Vec<_>>();
-    scan(&cs[..], &mut terminals);
-    
-    println!("{:?}", terminals);
-    
-    // add Terminal::Mul where it has been implicit in the string
-    let mut terms_added_mult = Vec::new();
-    insert_mult(&terminals[..], &mut terms_added_mult);
-
-    // finally transform the Terminals to a (potentially recursive) Expr
-    parse(&terms_added_mult).expect("parse_string: could not parse")
+    // scan:        scan string and create vector of terminals
+    // insert_mult: add Terminal::Mul where it has been implicit in the string
+    // parse:       finally transform the Terminals to a (potentially recursive) Expr
+    parse(insert_mult(scan(s)))
 }
