@@ -241,7 +241,10 @@ fn insert_mult_rec(inp: &[Terminal], mut out: Vec<Terminal>) -> Vec<Terminal> {
 }
 
 pub fn insert_mult(inp: Vec<Terminal>) -> Vec<Terminal> {
-    insert_mult_rec(&inp, vec![])
+    println!("{:?}", inp);
+    let res = insert_mult_rec(&inp, vec![]);
+    println!("{:?}", res);
+    res
 }
 
 /* 

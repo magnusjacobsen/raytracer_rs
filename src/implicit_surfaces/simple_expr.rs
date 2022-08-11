@@ -1,21 +1,34 @@
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::iter::Cloned;
+use std::slice::Iter;
 
 use crate::bx;
-use crate::implicit_surfaces::expr_parse::Expr;
+use crate::implicit_surfaces::expr::Expr;
 
 /*
-    One more type: atom
-    ARadical gets removed before the function simplify is called
-    -- not quite sure how Rusts handles these recursive types
+    Atom is an element in a term, eg in (x * 1), both x and 1 are terms
+    - Num is simply a constant (of float)
+    - Exponent is a variable, where for instance x^1 is explicit instead of explicit
+    - Root/Radical is for terms to be rooted,
+    --> all roots gets removed before the function simplify is called
 */
 #[derive(Clone, Debug)]
 pub enum Atom {
     Num(f32),
     Exponent(String, i32),
-    Radical(Box<SimpleExpr>, i32)
+    Root(Box<SimpleExpr>, i32)
 }
+/*
+    AtomGroup is a term, where for each Atom in the Vec, there exists an implicit multiplication between them
+*/
 type AtomGroup = Vec<Atom>;
+/*
+    SimpleExpr is the one side expression of an equation, where between each AtomGroups there exists an implicit addition
+
+    An example: (y * x^2) + (x * y^3)
+    where each paranthesis-group contains an AtomGroup of Atoms
+*/
 type SimpleExpr = Vec<AtomGroup>;
 
 impl Hash for Atom {
@@ -26,7 +39,7 @@ impl Hash for Atom {
                 s.hash(state);
                 i.hash(state);
             },
-            Self::Radical(se, i)    => {
+            Self::Root(se, i)    => {
                 i.hash(state);
                 se.hash(state);
             }
@@ -44,7 +57,20 @@ impl PartialEq for Atom {
                     false
                 }
             },
-            _ => self == other
+            Self::Exponent(s, i) => {
+                if let Self::Exponent(o_s, o_i) = other {
+                    s == o_s && i == o_i
+                } else {
+                    false
+                }
+            },
+            Self::Root(se, i) => {
+                if let Self::Root(o_se, o_i) = other {
+                    se == o_se &&  i == o_i
+                } else {
+                    false
+                }
+            }
         }
     }
 }
@@ -82,23 +108,38 @@ fn subst(e: Expr, x: &str, exp: &Expr) -> Expr {
     }
 }
 
-fn is_SE_empty(se: SimpleExpr) -> bool {
+fn is_empty(se: &SimpleExpr) -> bool {
     se.len() == 0 || se[0].len() == 0
 }
 
 /*
-    Combines two SimpleExpr's
+    Combines two SimpleExprs
+    - equivalent to multiplying an expression in an equation with another.
+    - example: combine(xs = x^2 + z, ys = y + 3)
+        xs = x^2 * (y + 3) + z * (y + 3)
+        xs = (x^2 * y) + (x^2 * 3) + (z * y) + (z * 3)
 */
-fn combine_rec(xs: &SimpleExpr, ys: &[AtomGroup]) -> SimpleExpr {
-    match ys.len() {
-        0 => vec![],
-        _ => { xs.iter().map(|x| x.iter().cloned().chain( ys[0].iter().cloned() ).collect::<Vec<_>>() ).chain(combine_rec(xs, &ys[1..]).iter().cloned()).collect::<Vec<_>>()
-        }
-    }
-}
-
 pub fn combine(xs: SimpleExpr, ys: SimpleExpr) -> SimpleExpr {
-    combine_rec(&xs, &ys[..])
+    if is_empty(&ys) {
+        xs
+    } else {
+        xs
+            .iter()
+            .map(|x| {
+                ys
+                    .iter()
+                    .cloned()
+                    .map(|y| x
+                        .iter()
+                        .cloned()
+                        .chain( y.iter().cloned() )
+                        .collect::<Vec<_>>()
+                    ).collect::<Vec<_>>()
+            })
+            .flatten()
+            .collect::<Vec<_>>()
+
+    }       
 }
 
 /*
@@ -127,10 +168,11 @@ fn simplify(exp: Expr) -> SimpleExpr {
                 combine(simplify(*e1.clone()), simplify(Expr::Exponent(e1, n - 1)))
             }
         },
-        Expr::Root(e1, n)       => vec![vec![Atom::Radical(bx!(simplify(*e1)), n)]],
+        Expr::Root(e1, n)       => vec![vec![Atom::Root(bx!(simplify(*e1)), n)]],
         Expr::Add(e1, e2)       => simplify(*e1).iter().chain(simplify(*e2).iter()).cloned().collect::<Vec<_>>(),
         Expr::Mul(e1, e2)       => combine(simplify(*e1), simplify(*e2)),
-        Expr::Div(e1, e2)       => combine(simplify(*e1), simplify(*e2)),
+        // e1 / e2 is the same as e1 * e2^-1 (because e2^-1 = 1 / e2)
+        Expr::Div(e1, e2)       => combine(simplify(*e1), simplify(Expr::Exponent(bx!(*e2), -1))),
     }
 }
 
@@ -145,7 +187,7 @@ fn highest_root(se: SimpleExpr) -> i32 {
             match atom {
                 Atom::Num(_)        => cc,
                 Atom::Exponent(..)  => cc,
-                Atom::Radical(_, n) => cc.max(*n),
+                Atom::Root(_, n) => cc.max(*n),
             }
         });
         slice = &slice[1..];
@@ -154,12 +196,12 @@ fn highest_root(se: SimpleExpr) -> i32 {
 }
 
 /*
-    Check if a SimpleExpr contains a radical sign
+    Check if a SimpleExpr contains a Root sign
 */
-fn contains_root(se: &SimpleExpr) -> bool {
+fn contains_roots(se: &SimpleExpr) -> bool {
     for atomGroup in se {
         for atom in atomGroup {
-            if let Atom::Radical(..) = atom {
+            if let Atom::Root(..) = atom {
                 return true;
             }
         }
@@ -339,20 +381,20 @@ fn simplify_expr(exp: Expr) -> Expr {
 }
 
 /*
-    Checks if nth radicals appear multiplied with itself n times
+    Checks if nth Roots appear multiplied with itself n times
     if that is the case, the rooted term is all that is left (1 time)
     eg: x_3 * x_3 * x_3 = x
 */
 fn remove_n_roots(se: SimpleExpr) -> SimpleExpr {
-    fn inner(atomGroup: &AtomGroup) -> SimpleExpr {
+    fn inner(atom_group: &AtomGroup) -> SimpleExpr {
         let mut roots = HashMap::new();
         let mut freed = vec![vec![]];
         let mut rest = vec![vec![]];
-        for atom in atomGroup {
+        for atom in atom_group {
             match atom {
                 Atom::Num(_)        => rest = combine(vec![vec![atom.clone()]], rest),
                 Atom::Exponent(..)  => rest = combine(vec![vec![atom.clone()]], rest),
-                Atom::Radical(x, n) => {
+                Atom::Root(x, n) => {
                     if let Some(v) = roots.get(&atom) {
                         if *n == (*v + 1) {
                             freed = combine((**x).clone(), freed);
@@ -374,3 +416,21 @@ fn remove_n_roots(se: SimpleExpr) -> SimpleExpr {
     }
     se.iter().fold(vec![], |acc, ag| acc.iter().chain(inner(ag).iter()).cloned().collect::<Vec<_>>())
 }
+
+/*
+    Takes a SimpleExpr, and first checks if there are any roots present
+    If that is the case:
+        - Finds the highest root, k, inverts all the terms without roots, which is equivaent to moving these terms to the other side of the equation sign.
+        - Multiplies both sides of the equation with itself, k times, and inverts the terms without roots once again (to "move them back to the other side of the equation sign").
+        - Call remove_n_roots on the collection with roots, and then merges the result with the non-root terms
+
+        If the combined result still contains_roots(), simplify_roots() is called once again. Otherwise the result is simply returned.
+*/
+/*
+fn simplify_roots(se: SimpleExpr) -> SimpleExpr {
+    if contains_roots(&se) {
+        let se_removed = remove_n_roots(se);
+        
+    }
+}
+*/

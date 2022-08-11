@@ -4,12 +4,13 @@ pub mod expr_parse_tests {
     extern crate test;
     use std::io::Result;
 
-    use crate::implicit_surfaces::expr_parse::{Terminal, Expr, scan, insert_mult, parse_string};
+    use crate::implicit_surfaces::expr::{Terminal, Expr, scan, insert_mult, parse_string};
     use crate::bx;
 
     #[test]
     fn test_scan() -> Result<()> {
         let test_list = vec![
+            ("x_3 * 4", vec![Terminal::Var("x".into()), Terminal::Root, Terminal::Int(3), Terminal::Mul, Terminal::Int(4)]),
             ("2*3", vec![Terminal::Int(2), Terminal::Mul, Terminal::Int(3)]),
             ("-2*3", vec![Terminal::Int(-2), Terminal::Mul, Terminal::Int(3)]),
             ("-2*-3", vec![Terminal::Int(-2), Terminal::Mul, Terminal::Int(-3)]),
@@ -42,6 +43,7 @@ pub mod expr_parse_tests {
     #[test]
     fn test_insert_mult() -> Result<()> {
         let test_list = vec![
+            ("x_3 * 4", vec![Terminal::Var("x".into()), Terminal::Root, Terminal::Int(3), Terminal::Mul, Terminal::Int(4)]),
             ("2*3", vec![Terminal::Int(2), Terminal::Mul, Terminal::Int(3)]),
             ("-2*3", vec![Terminal::Int(-2), Terminal::Mul, Terminal::Int(3)]),
             ("-2*-3", vec![Terminal::Int(-2), Terminal::Mul, Terminal::Int(-3)]),
@@ -74,6 +76,15 @@ pub mod expr_parse_tests {
     #[test]
     fn test_parse_string() -> Result<()> {
         let test_list = [
+            ("x_3 * 4", 
+                Expr::Mul(
+                    bx!(Expr::Root(
+                        bx!(Expr::Var("x".into())),
+                        3   
+                    )),
+                    bx!(Expr::Num(4.0))
+                )
+            ),
             ("2*3", 
                 Expr::Mul(
                     bx!(Expr::Num(2.0)), 
