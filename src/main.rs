@@ -10,7 +10,7 @@ fn main() {
 
     let expected = vec![vec![Atom::Exponent("x".into(), 2), Atom::Exponent("y".into(), 1)], vec![Atom::Exponent("z".into(), 1), Atom::Exponent("y".into(), 1)], vec![Atom::Exponent("x".into(), 2), Atom::Num(3.0)], vec![Atom::Exponent("z".into(), 1), Atom::Num(3.0)]];
     
-    let res = combine(xs, ys);
+    let res = combine(&xs, &ys);
 
     if expected == res {
         println!("equality!!!");

@@ -1,6 +1,6 @@
 #[cfg(test)]
 
-pub mod expr_parse_tests {
+pub mod t {
     extern crate test;
     use std::io::Result;
 
