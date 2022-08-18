@@ -83,7 +83,7 @@ fn atom_to_se(atom: Atom) -> SimpleExpr {
     vec![vec![atom]]
 }
 
-fn se_num(c: f32) -> SimpleExpr {
+pub fn se_num(c: f32) -> SimpleExpr {
     atom_to_se(Atom::Num(c))
 }
 
@@ -98,28 +98,28 @@ fn se_root(se: Box<SimpleExpr>, n: i32) -> SimpleExpr {
 /*
     Substitutes an FVar expression e, with another expression, ex, if the FVar's variable name matches x
 */
-fn subst(e: Expr, x: &str, exp: &Expr) -> Expr {
+fn _subst(e: Expr, x: &str, exp: &Expr) -> Expr {
     match e {
         Expr::Var(s)            => if s == x { (*exp).clone() } 
                                    else { Expr::Var(s.into()) },
         Expr::Add(a, b)         => Expr::Add(
-                                    bx!(subst(*a, x, exp)),
-                                    bx!(subst(*b, x, exp))
+                                    bx!(_subst(*a, x, exp)),
+                                    bx!(_subst(*b, x, exp))
                                    ),
         Expr::Mul(a, b)         => Expr::Mul(
-                                    bx!(subst(*a, x, exp)),
-                                    bx!(subst(*b, x, exp))
+                                    bx!(_subst(*a, x, exp)),
+                                    bx!(_subst(*b, x, exp))
                                    ),
         Expr::Exponent(a, i)    => Expr::Exponent(
-                                    bx!(subst(*a, x, exp)),
+                                    bx!(_subst(*a, x, exp)),
                                     i
                                    ),
         Expr::Div(a, b)         => Expr::Div(
-                                    bx!(subst(*a, x, exp)),
-                                    bx!(subst(*b, x, exp))
+                                    bx!(_subst(*a, x, exp)),
+                                    bx!(_subst(*b, x, exp))
                                    ),
         Expr::Root(a, i)        => Expr::Root(
-                                    bx!(subst(*a, x, exp)),
+                                    bx!(_subst(*a, x, exp)),
                                     i
                                    ),
         _                       => e, // FNum

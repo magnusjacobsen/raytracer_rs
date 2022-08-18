@@ -16,6 +16,13 @@ impl Ray {
     pub fn zero() -> Self {
         Self {origin: Point::zero(), direction: Vector::zero()}
     }
+
+    pub fn point_at_time(&self, t: f32) -> Point {
+        self.origin
+            .move_point(
+                self.direction.multiply_scalar(t)
+            )
+    }
 }
 
 impl PartialEq for Ray {

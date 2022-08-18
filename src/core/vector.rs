@@ -2,9 +2,9 @@ use std::fmt::{Display, Formatter, Result};
 use std::cmp::PartialEq;
 
 pub struct Vector {
-    x: f32,
-    y: f32,
-    z: f32,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
     _magnitude: f32,
 }
 
@@ -15,6 +15,10 @@ impl Vector {
 
     pub fn zero() -> Self {
         Self {x: 0.0, y: 0.0, z: 0.0, _magnitude: 0.0}
+    }
+
+    pub fn multiply_scalar(&self, s: f32) -> Self {
+        Vector::new(self.x * s, self.y * s, self.z * s)
     }
 }
 
