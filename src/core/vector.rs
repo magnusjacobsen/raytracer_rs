@@ -1,24 +1,32 @@
 use std::fmt::{Display, Formatter, Result};
 use std::cmp::PartialEq;
 
+#[derive(Clone)]
 pub struct Vector {
     pub x: f32,
     pub y: f32,
     pub z: f32,
-    _magnitude: f32,
+    magnitude: f32,
 }
 
 impl Vector {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Self {x, y, z, _magnitude: (x*x + y*y + z*z).sqrt()}
+        Self {x, y, z, magnitude: (x*x + y*y + z*z).sqrt()}
     }
 
     pub fn zero() -> Self {
-        Self {x: 0.0, y: 0.0, z: 0.0, _magnitude: 0.0}
+        Self {x: 0.0, y: 0.0, z: 0.0, magnitude: 0.0}
     }
 
     pub fn multiply_scalar(&self, s: f32) -> Self {
         Vector::new(self.x * s, self.y * s, self.z * s)
+    }
+
+    pub fn normalize(&self) -> Self {
+        match self.magnitude {
+            0.0     => self.clone(),
+            length  => Vector::new(self.x / length, self.y / length, self.z / length),
+        }
     }
 }
 

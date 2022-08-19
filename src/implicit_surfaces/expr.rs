@@ -2,7 +2,7 @@
     This module is able to scan and parse an equation string,
     and turn it into a expr format.
 */
-use crate::bx;
+use crate::{bx, core::point::Point};
 
 // omg we have discriminated unions, like in F# :O
 #[derive(PartialEq, Clone, Debug)]
@@ -241,10 +241,7 @@ fn insert_mult_rec(inp: &[Terminal], mut out: Vec<Terminal>) -> Vec<Terminal> {
 }
 
 pub fn insert_mult(inp: Vec<Terminal>) -> Vec<Terminal> {
-    println!("{:?}", inp);
-    let res = insert_mult_rec(&inp, vec![]);
-    println!("{:?}", res);
-    res
+    insert_mult_rec(&inp, vec![])
 }
 
 /* 
@@ -352,4 +349,138 @@ pub fn parse_string(s: String) -> Expr {
     // insert_mult: add Terminal::Mul where it has been implicit in the string
     // parse:       finally transform the Terminals to a (potentially recursive) Expr
     parse(insert_mult(scan(s)))
+}
+
+/*
+    Substitutes an Expr e, with another expression, ex, if the FVar's variable name matches x
+*/
+pub fn subst(e: Expr, x: &str, exp: &Expr) -> Expr {
+    match e {
+        Expr::Var(s)            => if s == x { (*exp).clone() } 
+                                   else { Expr::Var(s.into()) },
+        Expr::Add(a, b)         => Expr::Add(
+                                    bx!(subst(*a, x, exp)),
+                                    bx!(subst(*b, x, exp))
+                                   ),
+        Expr::Mul(a, b)         => Expr::Mul(
+                                    bx!(subst(*a, x, exp)),
+                                    bx!(subst(*b, x, exp))
+                                   ),
+        Expr::Exponent(a, i)    => Expr::Exponent(
+                                    bx!(subst(*a, x, exp)),
+                                    i
+                                   ),
+        Expr::Div(a, b)         => Expr::Div(
+                                    bx!(subst(*a, x, exp)),
+                                    bx!(subst(*b, x, exp))
+                                   ),
+        Expr::Root(a, i)        => Expr::Root(
+                                    bx!(subst(*a, x, exp)),
+                                    i
+                                   ),
+        _                       => e, // FNum
+    }
+}
+
+fn reduce_add(ex1: Expr, ex2: Expr, changed: bool) -> (Expr, bool) {
+    match (ex1, ex2) {
+        (ex1, Expr::Num(c)) if c == 0.0 => reduce_expr_rec(ex1, true),
+        (Expr::Num(c), ex2) if c == 0.0 => reduce_expr_rec(ex2, true),
+        (Expr::Num(c1), Expr::Num(c2)) => (Expr::Num(c1 + c2), true),
+        (ex1, ex2) => {
+            let (new_ex1, new_changed) = reduce_expr_rec(ex1, changed);
+            let (new_ex2, new_new_changed) = reduce_expr_rec(ex2, new_changed);
+            (Expr::Add(bx!(new_ex1), bx!(new_ex2)), new_new_changed)
+        }
+    }
+}
+
+fn reduce_mul(ex1: Expr, ex2: Expr, changed: bool) -> (Expr, bool) {
+    match (ex1, ex2) {
+        (_, Expr::Num(c)) if c == 0.0 => (Expr::Num(0.0), true),
+        (Expr::Num(c), _) if c == 0.0 => (Expr::Num(0.0), true),
+        (Expr::Num(c1), Expr::Num(c2)) => (Expr::Num(c1 * c2), true),
+        (ex1, ex2) => {
+            let (new_ex1, new_changed) = reduce_expr_rec(ex1, changed);
+            let (new_ex2, new_new_changed) = reduce_expr_rec(ex2, new_changed);
+            (Expr::Mul(bx!(new_ex1), bx!(new_ex2)), new_new_changed)
+        }
+    }
+}
+
+fn reduce_div(ex1: Expr, ex2: Expr, changed: bool) -> (Expr, bool) {
+    match (ex1, ex2) {
+        (_, Expr::Num(c)) if c == 0.0 => panic!("reduce_div: can't divide by zero"),
+        (Expr::Num(c), _) if c == 0.0 => (Expr::Num(0.0), true),
+        (Expr::Num(c1), Expr::Num(c2)) => (Expr::Num(c1 / c2), true),
+        (ex1, ex2) => {
+            let (new_ex1, new_changed) = reduce_expr_rec(ex1, changed);
+            let (new_ex2, new_new_changed) = reduce_expr_rec(ex2, new_changed);
+            (Expr::Div(bx!(new_ex1), bx!(new_ex2)), new_new_changed)
+        }
+    }
+}
+
+fn reduce_exp(ex1: Expr, n: i32, changed: bool) -> (Expr, bool) {
+    match ex1 {
+        Expr::Num(c) => (Expr::Num(c.powi(n)), true),
+        _ => {
+            let (new_ex1, new_changed) = reduce_expr_rec(ex1, changed);
+            (Expr::Exponent(bx!(new_ex1), n), new_changed)
+        }
+    }
+}
+
+fn reduce_root(ex1: Expr, n: i32, changed: bool) -> (Expr, bool) {
+    match ex1 {
+        Expr::Num(c) => (Expr::Num(c.powf(1.0 / n as f32)), true),
+        _ => {
+            let (new_ex1, new_changed) = reduce_expr_rec(ex1, changed);
+            (Expr::Root(bx!(new_ex1), n), new_changed)
+        }
+    }
+}
+
+fn reduce_expr_rec(exp: Expr, changed: bool) -> (Expr, bool) {
+    match exp {
+        Expr::Add(e1, e2) => reduce_add(*e1, *e2, changed),
+        Expr::Mul(e1, e2) => reduce_mul(*e1, *e2, changed),
+        Expr::Div(e1, e2) => reduce_div(*e1, *e2, changed),
+        Expr::Exponent(e1, n) => reduce_exp(*e1, n, changed),
+        Expr::Root(e1, n) => reduce_root(*e1, n, changed),
+        _ => (exp, changed), // Var and Num
+    }
+}
+
+/*
+    Reduces all possible expressions that include numbers
+*/
+pub fn reduce_expr(exp: Expr) -> Expr {
+    let (new_exp, changed) = reduce_expr_rec(exp, false);
+    if changed {
+        reduce_expr(new_exp)
+    } else {
+        new_exp
+    }
+}
+
+/*
+    Given a point, with values for x, y, and z, solves the expression
+*/
+pub fn solve_expr(exp: &Expr, p: &Point) -> f32 {
+    match exp {
+        Expr::Num(c)            => *c,
+        Expr::Add(e1, e2)       => solve_expr(e1, p) + solve_expr(e2, p),
+        Expr::Mul(e1, e2)       => solve_expr(e1, p) * solve_expr(e2, p),
+        Expr::Div(e1, e2)       => solve_expr(e1, p) / solve_expr(e2, p),
+        Expr::Exponent(e1, n)   => (solve_expr(e1, p)).powi(*n),
+        Expr::Root(e1, n)       => (solve_expr(e1, p)).powf(1.0 / *n as f32),
+        Expr::Var(s)            =>
+            match s.as_str() {
+                "x" => p.x,
+                "y" => p.y,
+                "z" => p.z,
+                _ => panic!("solve_expr: unmatched variable"),
+            },
+    }
 }

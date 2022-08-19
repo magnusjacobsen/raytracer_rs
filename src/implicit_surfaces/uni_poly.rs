@@ -1,5 +1,8 @@
 use super::simple_expr::{SimpleExpr, Atom};
-use super::poly::Poly;
+
+// Very small number. Considered as good as zero
+// 10^-20
+const EPSILON: f32 = 0.000000000000000000001;
 
 /*
     Similar to SimpleExpr, AtomgGroup and Atom
@@ -13,29 +16,25 @@ use super::poly::Poly;
         dy -> 4
         dz -> 5
 */
-enum IntAtom {
+#[derive(Clone, Debug)]
+pub enum IntAtom {
     Num(f32),
     Exponent(usize, i32),
 }
 
-type IntAtomGroup = Vec<IntAtom>;
+pub type IntAtomGroup = Vec<IntAtom>;
 
-type IntSimpleExpr = Vec<IntAtomGroup>;
+pub type IntSimpleExpr = Vec<IntAtomGroup>;
 
 /*
     UniPoly represents an univariate polynomial, ie. only one variable, t, which is implicitly present in all map elements of a Poly
 */
-type UniPoly = Vec<(i32, f32)>;
-
-/* 
-    Very small number. Considered as good as zero 
-*/
-const EPSILON: f32 = 1.0 / (10_i32.pow(20) as f32);
+pub type UniPoly = Vec<(i32, f32)>;
 
 /*
     Turns a SimpleExpr into an IntSimpleExpr
 */
-fn to_int_simple_expr(se: SimpleExpr) -> IntSimpleExpr {
+fn to_int_simple_expr(se: &SimpleExpr) -> IntSimpleExpr {
     se
         .into_iter()
         .map(|ag|
@@ -43,15 +42,15 @@ fn to_int_simple_expr(se: SimpleExpr) -> IntSimpleExpr {
                 .into_iter()
                 .map(|atom|
                     match atom {
-                        Atom::Num(c) => IntAtom::Num(c),
+                        Atom::Num(c) => IntAtom::Num(*c),
                         Atom::Exponent(e,x) =>
                             match e.as_str() {
-                                "ox" => IntAtom::Exponent(0, x),
-                                "oy" => IntAtom::Exponent(1, x),
-                                "oz" => IntAtom::Exponent(2, x),
-                                "dx" => IntAtom::Exponent(3, x),
-                                "dy" => IntAtom::Exponent(4, x),
-                                "dz" => IntAtom::Exponent(5, x),
+                                "ox" => IntAtom::Exponent(0, *x),
+                                "oy" => IntAtom::Exponent(1, *x),
+                                "oz" => IntAtom::Exponent(2, *x),
+                                "dx" => IntAtom::Exponent(3, *x),
+                                "dy" => IntAtom::Exponent(4, *x),
+                                "dz" => IntAtom::Exponent(5, *x),
                                 _    => panic!("to_int_simple_expr: unmatched Atom::Exponent variable clause"),
                             },
                         _ => panic!("to_int_simple_expr: unmatched Atom::Root clause"),
@@ -63,11 +62,22 @@ fn to_int_simple_expr(se: SimpleExpr) -> IntSimpleExpr {
 }
 
 /*
+    Converts a (i32, SimpleExpr) vec into a (i32, IntSimpleExpr) vec
+*/
+pub fn to_int_simple_expr_vec(se_vec: Vec<(i32, SimpleExpr)>) -> Vec<(i32, IntSimpleExpr)> {
+    se_vec
+        .iter()
+        .map(|(i, se)| (*i, to_int_simple_expr(se))
+        )
+        .collect()
+}
+
+/*
     Solves a IntSimpleExpr, with an array of ray values, where index positions match the first int of an IntAtom::Exponent
 
     Returns ?
 */
-fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f32; 6]) -> f32 {
+pub fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f32; 6]) -> f32 {
     ise
         .iter()
         .map(|ag|
@@ -97,7 +107,7 @@ fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f32; 6]) -> f32 {
 
     also, when is this used???
     */
-fn to_uni_poly(vec: Vec<(i32, IntSimpleExpr)>, ray_values: [f32; 6]) -> UniPoly {
+pub fn to_uni_poly(vec: &Vec<(i32, IntSimpleExpr)>, ray_values: [f32; 6]) -> UniPoly {
     vec
         .iter()
         .map(|(n, ise)|
@@ -109,7 +119,7 @@ fn to_uni_poly(vec: Vec<(i32, IntSimpleExpr)>, ray_values: [f32; 6]) -> UniPoly 
 /*
     Solves an UniPoly for a given t value
 */
-fn solve_uni_poly(up: &UniPoly, t: f32) -> f32 {
+pub fn solve_uni_poly(up: &UniPoly, t: f32) -> f32 {
     up
         .iter()
         .map(|(n, c)|
@@ -122,7 +132,7 @@ fn solve_uni_poly(up: &UniPoly, t: f32) -> f32 {
 /*
     Returns the derivative UniPoly of the given UniPoly
 */
-fn derivative(up: &UniPoly) -> UniPoly {
+pub fn derivative(up: &UniPoly) -> UniPoly {
     up
         .iter()
         .fold(vec![], |mut acc, (n, c)|
@@ -224,10 +234,10 @@ fn long_division_remainder(f: &UniPoly, s: &UniPoly) -> UniPoly {
     if f[0].0 - s[0].0 < 0 {
         f.clone()
     } else {
-        let (fExp, fConst) = f[0];
-        let (sExp, sConst) = s[0];
+        let (f_exp, f_const) = f[0];
+        let (s_exp, s_const) = s[0];
         // division of the two terms
-        let k = (fExp - sExp, fConst / sConst);
+        let k = (f_exp - s_exp, f_const / s_const);
         let ks = multiply(&s, k);
         let new_f = subtract(&f, &ks);
         if new_f.is_empty() {
@@ -241,7 +251,7 @@ fn long_division_remainder(f: &UniPoly, s: &UniPoly) -> UniPoly {
 /*
     Generates a Sturm sequence chain for an UniPoly and its derivate
 */
-fn sturm_seq(up: UniPoly, derivative: UniPoly) -> Vec<UniPoly> {
+pub fn sturm_seq(up: &UniPoly, derivative: &UniPoly) -> Vec<UniPoly> {
     fn inner(mut up_vec: Vec<UniPoly>) -> Vec<UniPoly> {
         let last = up_vec.len() - 1;
         // degree of last element of the Vec
@@ -254,7 +264,7 @@ fn sturm_seq(up: UniPoly, derivative: UniPoly) -> Vec<UniPoly> {
             }
         }
     }
-    let up_vec = vec![up, derivative];
+    let up_vec = vec![up.clone(), derivative.clone()];
     inner(up_vec)
 }
 
@@ -281,7 +291,7 @@ fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f32) -> u32 {
 
     Runs until depth reaches 0.
 */
-pub fn get_interval(up_vec: Vec<UniPoly>, lo: f32, hi: f32, depth: i32) -> Option<(f32, f32)> {
+pub fn get_interval(up_vec: &Vec<UniPoly>, lo: f32, hi: f32, depth: i32) -> Option<(f32, f32)> {
     if depth <= 0 {
         Some((lo, hi))
     } else {

@@ -1,4 +1,5 @@
 use rustc_hash::FxHashMap;
+use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::bx;
@@ -11,7 +12,7 @@ use crate::implicit_surfaces::expr::Expr;
     - Root/Radical is for terms to be rooted,
     --> all roots gets removed before the function simplify is called
 */
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialOrd)]
 pub enum Atom {
     Num(f32),
     Exponent(String, i32),
@@ -44,6 +45,20 @@ impl Hash for Atom {
         }
     }
 }
+/*
+impl PartialOrd for Atom {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match self {
+            Self::Num(f) => match other {
+                Self::Num(f) => 
+            },
+            Self::Exponent(s, i) {
+
+            },
+            Self::Root(se, i)
+        }
+    }
+}*/
 
 impl PartialEq for Atom {
     fn eq(&self, other: &Self) -> bool {
@@ -93,37 +108,6 @@ fn se_exp(s: String, n: i32) -> SimpleExpr {
 
 fn se_root(se: Box<SimpleExpr>, n: i32) -> SimpleExpr {
     atom_to_se(Atom::Root(se, n))
-}
-
-/*
-    Substitutes an FVar expression e, with another expression, ex, if the FVar's variable name matches x
-*/
-fn _subst(e: Expr, x: &str, exp: &Expr) -> Expr {
-    match e {
-        Expr::Var(s)            => if s == x { (*exp).clone() } 
-                                   else { Expr::Var(s.into()) },
-        Expr::Add(a, b)         => Expr::Add(
-                                    bx!(_subst(*a, x, exp)),
-                                    bx!(_subst(*b, x, exp))
-                                   ),
-        Expr::Mul(a, b)         => Expr::Mul(
-                                    bx!(_subst(*a, x, exp)),
-                                    bx!(_subst(*b, x, exp))
-                                   ),
-        Expr::Exponent(a, i)    => Expr::Exponent(
-                                    bx!(_subst(*a, x, exp)),
-                                    i
-                                   ),
-        Expr::Div(a, b)         => Expr::Div(
-                                    bx!(_subst(*a, x, exp)),
-                                    bx!(_subst(*b, x, exp))
-                                   ),
-        Expr::Root(a, i)        => Expr::Root(
-                                    bx!(_subst(*a, x, exp)),
-                                    i
-                                   ),
-        _                       => e, // FNum
-    }
 }
 
 fn is_empty(se: &SimpleExpr) -> bool {
@@ -488,6 +472,10 @@ fn simplify_roots(se: SimpleExpr) -> SimpleExpr {
     }
 }
 
+fn sort_ag(ag: &mut AtomGroup) {
+    ag.sort_by(|a, b| a.partial_cmp(&b).unwrap());
+}
+
 /*
     Takes an AtomGroup (equivalent to a term in an equation)
     Puts similar parts of the term together, and counts how many times they appear (their exponents)
@@ -517,6 +505,7 @@ pub fn simplify_atom_group(ag: &AtomGroup) -> AtomGroup {
         // a whatever the rest it, multiplying by 0 is 0
         vec![]
     } else {
+        sort_ag(&mut exps_vec);
         exps_vec.insert(0, Atom::Num(constant));
         exps_vec
     }

@@ -51,7 +51,7 @@ fn simple_expr_to_poly(se: SimpleExpr, v: String) -> Poly {
 /*
     Converts an Expr into a Poly (polynomial) with respect to a variable string V
 */
-fn expr_to_poly(expr: Expr, v: String) -> Poly {
+pub fn expr_to_poly(expr: Expr, v: String) -> Poly {
     simple_expr_to_poly(simplify_simple_expr(expr_to_simple_expr(expr)), v)
 }
 
@@ -71,7 +71,7 @@ fn poly_derivative(poly: Poly) -> Poly {
 /*
     Turns a Poly into a vec sorted by order (i32)
 */
-fn poly_as_list(poly: Poly) -> Vec<(i32, SimpleExpr)> {
+pub fn poly_as_list(poly: Poly) -> Vec<(i32, SimpleExpr)> {
     let mut vec = poly.into_iter().collect::<Vec<_>>();
     vec.sort_by(|a,b| a.0.partial_cmp(&b.0).unwrap());
     vec

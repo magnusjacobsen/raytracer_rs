@@ -19,7 +19,7 @@ impl HitPoint {
         Self { ray, time, normal, material, shape, u, v, did_hit }
     }
 
-    pub fn point(&self) {
+    /*pub fn point(&self) {
         self.ray.
-    }
+    }*/
 }

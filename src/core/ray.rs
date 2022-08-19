@@ -4,8 +4,8 @@ use super::vector::Vector;
 use std::cmp::PartialEq;
 
 pub struct Ray {
-    origin: Point,
-    direction: Vector,
+    pub origin: Point,
+    pub direction: Vector,
 }
 
 impl Ray {
