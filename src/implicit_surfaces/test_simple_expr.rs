@@ -5,7 +5,7 @@ pub mod t {
     use std::io::Result;
 
     use crate::bx;
-    use crate::implicit_surfaces::simple_expr::{Atom, combine, self, expr_to_simple_expr, SimpleExpr};
+    use crate::implicit_surfaces::simple_expr::{Atom, combine, self, expr_to_simple_expr, SimpleExpr, rewrite_expr};
     use crate::implicit_surfaces::expr::{self, Expr, parse_string, subst};
 
     fn sort_simple_expr(mut se: SimpleExpr) -> SimpleExpr {
@@ -61,12 +61,16 @@ pub mod t {
             Atom::Num(-2.0),
 
         ];
+
         let result = simple_expr::simplify_atom_group(&input);
+
         let expected = vec![
             Atom::Num(4.0),
             Atom::Exponent("px".into(), 3)
         ];
+
         assert_eq!(result, expected);
+
         Ok(())
     }
 
@@ -83,7 +87,9 @@ pub mod t {
             Atom::Exponent("x".into(), 2),
             Atom::Exponent("y".into(), 3)
         ]];
+        
         let result = simple_expr::simplify_simple_expr(input);
+
         let expected = vec![vec![
             Atom::Num(2.0),
             Atom::Exponent("x".into(), 2),
@@ -185,7 +191,7 @@ pub mod t {
                     bx!(Expr::Num(-1.0))
                 ))
             );
-        let expected_se = vec![
+        let mut expected_se = vec![
             vec![Atom::Num(1.0)],
             vec![Atom::Num(2.0), Atom::Exponent("dx".into(), 1), Atom::Exponent("px".into(), 1), Atom::Exponent("t".into(), 1)],
             vec![Atom::Num(2.0), Atom::Exponent("dy".into(), 1), Atom::Exponent("py".into(), 1), Atom::Exponent("t".into(), 1)],
@@ -199,11 +205,181 @@ pub mod t {
         ];
 
         result_se = sort_simple_expr(result_se);
-        //expected_se = sort_simple_expr(expected_se);
+        expected_se = sort_simple_expr(expected_se);
 
         assert_eq!(result_sub, expected_sub);
         assert_eq!(result_se, expected_se);
 
         Ok(())
     }
+
+    /*
+        All the following tests are based on the rules listed on page 41 in the Lecture notes (updated April 14) document
+    */
+
+    #[test]
+    fn rule_zero_degree_exponent() -> Result<()> {
+        // case 1
+        let input = "e^0".to_string();
+        let result = rewrite_expr(parse_string(input));
+        let expected = vec![vec![
+            Atom::Num(1.0)
+        ]];
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_one_degree_exponent() -> Result<()> {
+        // case 2
+        let input = "e^1".to_string();
+        let result = rewrite_expr(parse_string(input));
+        let expected = vec![vec![
+            Atom::Exponent("e".into(), 1)
+        ]];
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_third_degree_exponent() -> Result<()> {
+        // case 3
+        let input = "e^3".to_string();
+        let result = rewrite_expr(parse_string(input));
+        let expected = vec![vec![
+            Atom::Exponent("e".into(), 1), 
+            Atom::Exponent("e".into(), 1), 
+            Atom::Exponent("e".into(), 1)
+        ]];
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_multiply_plus_paranthesis() -> Result<()> {
+        // case 4
+        let input = "e1*(e2 + e3)".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![
+            vec![
+                Atom::Exponent("e2".into(), 1),
+                Atom::Exponent("e1".into(), 1)
+            ],
+            vec![
+                Atom::Exponent("e3".into(), 1),
+                Atom::Exponent("e1".into(), 1)
+            ]
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_plus_paranthesis_multiply() -> Result<()> {
+        // case 4
+        let input = "(e2 + e3) * e1".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![
+            vec![
+                Atom::Exponent("e2".into(), 1),
+                Atom::Exponent("e1".into(), 1)
+            ],
+            vec![
+                Atom::Exponent("e3".into(), 1),
+                Atom::Exponent("e1".into(), 1)
+            ]
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())    
+    }
+
+    #[test]
+    fn rule_multiply_neg_paranthesis() -> Result<()> {
+        // case 5
+        let input = "e1 * (e2 - e3)".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![
+            vec![
+                Atom::Exponent("e2".into(), 1),
+                Atom::Exponent("e1".into(), 1),
+            ],
+            vec![
+                Atom::Exponent("e3".into(), 1),
+                Atom::Num(-1.0),
+                Atom::Exponent("e1".into(), 1)
+            ]
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_neg_paranthesis_multiply() -> Result<()> {
+        // case 5
+        let input = "(e2 - e3) * e1".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![
+            vec![
+                Atom::Exponent("e2".into(), 1),
+                Atom::Exponent("e1".into(), 1),
+            ],
+            vec![
+                Atom::Exponent("e3".into(), 1),
+                Atom::Num(-1.0),
+                Atom::Exponent("e1".into(), 1)
+            ]
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_multiply_division() -> Result<()> {
+        // case 6
+        let input = "e1 * (e2 / (e3 + 1))".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![vec![
+            Atom::Exponent("e2".into(), 1),
+            Atom::Exponent("e1".into(), 1)
+        ]]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_division_twice() -> Result<()> {
+        // case 7
+        let input = "(e1 / e2) / e3".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![vec![
+            Atom::Exponent("e1".into(), 1)
+        ]]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_division_twice_other_way() -> Result<()> {
+        // case 8
+        let input = "e1 / (e2 / e3)".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![vec![
+            Atom::Exponent("e3".into(), 1),
+            Atom::Exponent("e1".into(), 1)
+        ]]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    
 }

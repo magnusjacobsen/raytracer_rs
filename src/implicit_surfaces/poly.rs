@@ -15,9 +15,10 @@ pub type Poly = FxHashMap<i32, SimpleExpr>;
     equivalent to taking the derivate with respect to a variable
 */
 fn add_atom_group(v: &str, mut poly: Poly, ag: AtomGroup) -> Poly {
-    if !ag.is_empty() {
+    if ag.is_empty() {
         return poly;
     } else {
+        println!("{:?}", ag);
         for atom in &ag {
             match atom {
                 Atom::Exponent(var, d) if var == &v => {
@@ -33,14 +34,14 @@ fn add_atom_group(v: &str, mut poly: Poly, ag: AtomGroup) -> Poly {
                     poly.entry(*d).or_insert(vec![]).push(splitted);
                     return poly;
                 },
-                Atom::Exponent(..) => continue,
-                _ => panic!("add_atom_group: should never meet an ANum here!!"),
+                _ => continue,
             }
         }
+        // if we never reached an exponent with variable v
         poly.entry(0).or_insert(vec![]).push(ag);
     }
     poly
-} 
+}
 
 fn simple_expr_to_poly(se: SimpleExpr, v: String) -> Poly {
     se.into_iter().fold(FxHashMap::default(), |poly, ag| 

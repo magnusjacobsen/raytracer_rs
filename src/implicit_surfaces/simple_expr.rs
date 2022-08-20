@@ -505,6 +505,7 @@ pub fn simplify_atom_group(ag: &AtomGroup) -> AtomGroup {
         // a whatever the rest it, multiplying by 0 is 0
         vec![]
     } else {
+        // sorting here is necessary, as simplify_simple_expr will otherwise not recognize atom groups with the same elements...
         sort_ag(&mut exps_vec);
         exps_vec.insert(0, Atom::Num(constant));
         exps_vec
@@ -559,7 +560,7 @@ pub fn simplify_simple_expr(se: SimpleExpr) -> SimpleExpr {
 /*
     Invoking the spirit of Muhammad ibn Musa al-Khwarizmi
 */
-fn rewrite_expr(exp: Expr) -> SimpleExpr {
+pub fn rewrite_expr(exp: Expr) -> SimpleExpr {
     let reduced = match simplify_expr(exp) {
         Expr::Div(keep, _)  => *keep,
         res                 => res,
