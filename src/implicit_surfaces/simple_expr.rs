@@ -1,5 +1,4 @@
 use rustc_hash::FxHashMap;
-use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 use crate::bx;
@@ -350,7 +349,7 @@ fn simplify_expr_root(e1: Expr, n: i32, changed: bool) -> (Expr, bool) {
         // simple recursive situation
         e1 => {
             let (new_e1, new_changed) = simplify_expr_rec(e1, changed);
-            (Expr::Exponent(bx!(new_e1), n), new_changed)
+            (Expr::Root(bx!(new_e1), n), new_changed)
         }
     }
 }
@@ -389,6 +388,7 @@ fn simplify_expr(exp: Expr) -> Expr {
     if that is the case, the rooted term is all that is left (1 time)
     eg: x_3 * x_3 * x_3 = x
     TODO: could this be done simpler?
+    TODO: or perhaps be done later, where we can easier manipulate exponents and their count, instead of over populating the heap...
 */
 fn remove_n_roots(se: SimpleExpr) -> SimpleExpr {
     fn inner(atom_group: &AtomGroup) -> SimpleExpr {
@@ -444,13 +444,19 @@ fn simplify_roots(se: SimpleExpr) -> SimpleExpr {
                 no_roots.push(ag.clone());
             }
         );
+        
         if !roots.is_empty() {
             let k = highest_root(&roots);
-
-            // no_roots multiply by -1, then to the power of k, and then again multiply by -1
-            let no_roots_invert = combine(&no_roots, &se_num(-1.0));
-            let no_roots_multiplied = (0..k).fold(se_empty(), |acc, _| combine(&acc, &no_roots_invert));
-            let no_roots_done = combine(&no_roots_multiplied, &se_num(-1.0));
+            
+            let no_roots_done = if !no_roots.is_empty() {
+                // no_roots multiply by -1, then to the power of k, and then again multiply by -1
+                let no_roots_invert = combine(&no_roots, &se_num(-1.0));
+                let no_roots_multiplied = (0..k).fold(se_empty(), |acc, _| combine(&acc, &no_roots_invert));
+                
+                combine(&no_roots_multiplied, &se_num(-1.0))
+            } else {
+                no_roots
+            };
 
             // multiply the roots terms, but don't invert
             let roots_multiplied = (0..k).fold(se_empty(), |acc, _| combine(&acc, &roots));
@@ -565,7 +571,7 @@ pub fn rewrite_expr(exp: Expr) -> SimpleExpr {
         Expr::Div(keep, _)  => *keep,
         res                 => res,
     };
-
+    
     simplify_roots(simplify(reduced))
 }
 

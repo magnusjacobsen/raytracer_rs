@@ -18,7 +18,6 @@ fn add_atom_group(v: &str, mut poly: Poly, ag: AtomGroup) -> Poly {
     if ag.is_empty() {
         return poly;
     } else {
-        println!("{:?}", ag);
         for atom in &ag {
             match atom {
                 Atom::Exponent(var, d) if var == &v => {
@@ -59,11 +58,13 @@ pub fn expr_to_poly(expr: Expr, v: String) -> Poly {
 /*
     Returns the derivate of a Poly, with respect to t
 */
-fn poly_derivative(poly: Poly) -> Poly {
+pub fn poly_derivative(poly: Poly) -> Poly {
     let mut derivative = FxHashMap::default();
     for (order, se) in poly.iter() {
         if *order > 0 {
-            derivative.insert(order - 1, combine(se, &se_num(*order as f32)));
+            let multiplied = combine(se, &se_num(*order as f32));
+            let simplified = simplify_simple_expr(multiplied);
+            derivative.insert(order - 1, simplified);
         }
     }
     derivative

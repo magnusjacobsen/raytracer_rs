@@ -3,6 +3,7 @@ use std::cmp::PartialEq;
 
 use super::vector::Vector;
 
+#[derive(Clone, Debug)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -18,8 +19,32 @@ impl Point {
         Self {x: 0.0, y: 0.0, z: 0.0}
     }
 
-    pub fn move_point(&self, v: Vector) -> Self {
-        Point::new(self.x + v.x, self.y + v.y, self.z + v.z)
+    pub fn move_point(&self, v: &Vector) -> Self {
+        Self::new(
+            self.x + v.x, 
+            self.y + v.y, 
+            self.z + v.z
+        )
+    }
+
+    pub fn subtract(&self, other: &Self) -> Vector {
+        Vector::new(
+            self.x - other.x,
+            self.y - other.y,
+            self.z - other.z
+        )
+    }
+
+    pub fn add(&self, other: &Self) -> Self {
+        Self::new(
+            self.x + other.x,
+            self.y + other.y,
+            self.z + other.z,
+        )
+    }
+
+    pub fn distance(&self, other: &Self) -> Vector {
+        other.subtract(self)
     }
 }
 

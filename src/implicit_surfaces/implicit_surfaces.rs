@@ -1,30 +1,22 @@
 use crate::bx;
-use crate::core::hitpoint;
+use crate::core::hitpoint::HitPoint;
 use crate::core::point::Point;
 use crate::core::ray::Ray;
+use crate::materials::Material;
+use crate::shapes::base_shape::{HitFunction, BaseShape};
 use crate::core::vector::Vector;
-use crate::implicit_surfaces::uni_poly::solve_int_simple_expr;
-use super::expr::{reduce_expr, subst, Expr, solve_expr, parse_string};
-use super::poly::{Poly, self, expr_to_poly, poly_as_list};
-use super::uni_poly::{UniPoly, solve_uni_poly, IntSimpleExpr, to_uni_poly, sturm_seq, get_interval, derivative, to_int_simple_expr_vec};
-use super::simple_expr::{self, SimpleExpr};
+use super::expr::{self, Expr};
+use super::poly::{self};
+use super::uni_poly::{self, UniPoly, IntSimpleExpr};
 
 // const values used in the newton_raphson function
 const TOLERANCE: f32 = 0.000001; // 10^-5
 const EPSILON: f32 = 0.00000000001; // 10^-10
 
-// ALL PRAISE HIGHER ORDER FUNCTIONS!!
-// I have to write the declaration in the function signature
-//type HitFunction = impl Fn(Ray) -> Option<(f32, Vector)>;
-
-type HitPoint = hitpoint::HitPoint;
-//type BaseShape = ;
-//type Shape = ;
-
 /*
     Substitutes ray variables (p + t * d) into an Expr, that represents an implicit surface
 */
-fn subst_with_ray(exp: Expr) -> Expr {
+fn subst_with_ray(exp: &Expr) -> Expr {
     let ex = Expr::Add(
         bx!(Expr::Var("ox".into())),
         bx!(Expr::Mul(
@@ -46,9 +38,9 @@ fn subst_with_ray(exp: Expr) -> Expr {
             bx!(Expr::Var("dz".into()))
         ))
     );
-    let subbed_x = subst(exp, "x", &ex);
-    let subbed_xy = subst(subbed_x, "y", &ey);
-    subst(subbed_xy, "z", &ez)
+    let subbed_x = expr::subst(exp, "x", &ex);
+    let subbed_xy = expr::subst(&subbed_x, "y", &ey);
+    expr::subst(&subbed_xy, "z", &ez)
 }
 
 /*
@@ -117,7 +109,7 @@ fn partial_derivative(exp: &Expr, var: String) -> Expr {
         }
     }
 
-    reduce_expr(inner(exp, var.as_str()))
+    expr::reduce_expr(inner(exp, var.as_str()))
 }
 
 /*
@@ -126,9 +118,9 @@ fn partial_derivative(exp: &Expr, var: String) -> Expr {
     Thou shall not be simplified!
 */
 fn normal_vector(p: &Point, dx: &Expr, dy: &Expr, dz: &Expr) -> Vector {
-    let x = solve_expr(dx, p);
-    let y = solve_expr(dy, p);
-    let z = solve_expr(dz, p);
+    let x = expr::solve_expr(dx, p);
+    let y = expr::solve_expr(dy, p);
+    let z = expr::solve_expr(dz, p);
     Vector::new(x, y, z).normalize()
 }
 
@@ -177,8 +169,8 @@ fn newton_raphson(f: &UniPoly, df: &UniPoly, runs: usize, guess: f32) -> Option<
     if runs == 0 {
         None
     } else {
-        let y = solve_uni_poly(&f, guess);
-        let dy = solve_uni_poly(&df, guess);
+        let y = uni_poly::solve_uni_poly(&f, guess);
+        let dy = uni_poly::solve_uni_poly(&df, guess);
         if dy.abs() < EPSILON {
             None
         } else {
@@ -201,7 +193,7 @@ fn newton_raphson(f: &UniPoly, df: &UniPoly, runs: usize, guess: f32) -> Option<
         * derivative with respect to y,
         * derivative with respect to z.
 */
-fn hit_function_first_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: Expr, pdz: Expr) -> impl Fn(Ray) -> Option<(f32, Vector)> {
+fn hit_function_first_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: Expr, pdz: Expr) -> HitFunction {
     let a_ise = if !poly.is_empty() && poly[0].0 == 1 {
         let res = poly[0].1.clone();
         poly.remove(0);
@@ -216,17 +208,21 @@ fn hit_function_first_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy
     };
 
     // the returned hit function
-    move |ray| {
+    let hit_function = move |ray: &Ray| {
         let ray_values = get_ray_values(&ray);
-        let a = solve_int_simple_expr(&a_ise, ray_values);
-        let b = solve_int_simple_expr(&b_ise, ray_values);
+        let a = uni_poly::solve_int_simple_expr(&a_ise, ray_values);
+        let b = uni_poly::solve_int_simple_expr(&b_ise, ray_values);
         let t = (-b) / a;
         if t < 0.0 {
             None
         } else {
-            Some((t, normal_vector(&ray.point_at_time(t), &pdx, &pdy, &pdz)))
+            let time_point = ray.point_at_time(t);
+            let hit = HitPoint::new(t, normal_vector(&time_point, &pdx, &pdy, &pdz), &ray);
+            Some(hit)
         }
-    }
+    };
+
+    Box::pin(hit_function)
 }
 
 /*
@@ -238,7 +234,7 @@ fn hit_function_first_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy
         * derivative with respect to y,
         * derivative with respect to z.
 */
-fn hit_function_second_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: Expr, pdz: Expr) -> impl Fn(Ray) -> Option<(f32, Vector)> {
+fn hit_function_second_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: Expr, pdz: Expr) -> HitFunction {
     let a_ise = poly[0].1.clone(); // we know it is degree 2, otherwise we wouldn't be here
     poly.remove(0);
     let b_ise = if !poly.is_empty() && poly[0].0 == 1 {
@@ -255,11 +251,11 @@ fn hit_function_second_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
     };
 
     // the hit function that is returned
-    move |ray| {
+    let hit_function = move |ray: &Ray| {
         let ray_values = get_ray_values(&ray);
-        let a = solve_int_simple_expr(&a_ise, ray_values);
-        let b = solve_int_simple_expr(&b_ise, ray_values);
-        let c = solve_int_simple_expr(&c_ise, ray_values);
+        let a = uni_poly::solve_int_simple_expr(&a_ise, ray_values);
+        let b = uni_poly::solve_int_simple_expr(&b_ise, ray_values);
+        let c = uni_poly::solve_int_simple_expr(&c_ise, ray_values);
         let dis = discriminant(a, b, c);
         if dis < 0.0 {
             None
@@ -271,10 +267,13 @@ fn hit_function_second_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
             } else {
                 let dt = if ts[0] < ts[1] { ts[0] } else { ts[1] };
                 let time_point = ray.point_at_time(*dt);
-                Some((*dt, normal_vector(&time_point, &pdx, &pdy, &pdz)))
+                let hit = HitPoint::new(*dt, normal_vector(&time_point, &pdx, &pdy, &pdz), &ray);
+                Some(hit)
             }
         }
-    }
+    };
+
+    Box::pin(hit_function)
 }
 
 /*
@@ -291,8 +290,8 @@ fn hit_function_second_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
 
     we try again. This is stopped when a good approximation of the smallest root is found, no result has been found, or we have done the entire operation 5 times.
 */
-fn hit_function_higher_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: Expr, pdz: Expr) -> impl Fn(Ray) -> Option<(f32, Vector)> {
-    move |ray| {
+fn hit_function_higher_degree(poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: Expr, pdz: Expr) -> HitFunction {
+    let hit_function = move |ray: &Ray| {
         let mut lo = 0.0;
         let mut hi = 100.0;
         let mut max_depth = 15;
@@ -301,12 +300,12 @@ fn hit_function_higher_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
         
         let ray_values = get_ray_values(&ray);
         // now that we now the ray values, we can turn our multivariable polynomial into a univariate one
-        let up = to_uni_poly(&poly, ray_values);
-        let derivative = derivative(&up);
+        let up = uni_poly::to_uni_poly(&poly, ray_values);
+        let derivative = uni_poly::uni_poly_derivative(&up);
 
-        let sturm_seq = sturm_seq(&up, &derivative);
+        let sturm_seq = uni_poly::sturm_seq(&up, &derivative);
         for _ in 0..iterations {
-            match get_interval(&sturm_seq, lo, hi, max_depth) {
+            match uni_poly::get_interval(&sturm_seq, lo, hi, max_depth) {
                 None            => return None,
                 Some((ilo, ihi))  => {
                     lo = ilo;
@@ -325,14 +324,17 @@ fn hit_function_higher_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
                                 continue;
                             } else {
                                 let time_point = ray.point_at_time(t);
-                                return Some((t, normal_vector(&time_point, &pdx, &pdy, &pdz)));
+                                let hit = HitPoint::new(t, normal_vector(&time_point, &pdx, &pdy, &pdz), &ray);
+                                return Some(hit);
                             }
                     }
                 }
             }
         }
         None
-    }
+    };
+
+    Box::pin(hit_function)
 }
 
 /*
@@ -351,20 +353,27 @@ fn hit_function_higher_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
     Returns a BaseShape, that given a Texture, can be converted to a Shape, with the to_shape() function.
     That Shape contains the hit function mentioned earlier, and an is_inside() function.
 */
-pub fn make_implicit(s: String) {
+pub fn make_implicit(s: String, material: Box<dyn Material>) -> BaseShape {
     // parsing the equation string to Expr
-    let exp = parse_string(s);
+    let exp = expr::parse_string(s);
     // partial derivatives, needed for the nromal, returned when a hit occurs
     let pdx = partial_derivative(&exp, "x".into());
     let pdy = partial_derivative(&exp, "y".into());
     let pdz = partial_derivative(&exp, "z".into());
     // converting the Expr to a polynomial
-    let poly = expr_to_poly(subst_with_ray(exp), "t".into());
+    let poly = poly::expr_to_poly(subst_with_ray(&exp), "t".into());
     // turn the poly into a vec of (i32, IntSimpleExpr) tuples
-    let poly_vec = to_int_simple_expr_vec(poly_as_list(poly));
-    println!("HELLO");
-    println!("{:?}", poly_vec);
-    println!("{:?}", pdx);
-    println!("{:?}", pdy);
-    println!("{:?}", pdz);
+    let poly_vec = uni_poly::to_int_simple_expr_vec(poly::poly_as_list(poly));
+
+    let hit_function: HitFunction = match poly_vec.last().expect("should not be empty").0 {
+        1 => hit_function_first_degree(poly_vec, pdx, pdy, pdz),
+        2 => hit_function_second_degree(poly_vec, pdx, pdy, pdz),
+        _ => hit_function_higher_degree(poly_vec, pdx, pdy, pdz),
+    };
+    
+    let is_inside = Box::pin(
+        move |p: &Point| expr::solve_expr(&exp, &p) > 0.0
+    );
+
+    BaseShape::new(is_inside, hit_function, material)
 }

@@ -1,25 +1,26 @@
+use super::point::Point;
 use super::ray::Ray;
 use super::vector::Vector;
-use super::shape::Shape;
-use super::material::Material;
+
+const ESCPAE_SCALAR: f32 = 0.000001;
 
 pub struct HitPoint {
-    ray: Ray,
-    time: f32,
-    normal: Vector,
-    material: Material,
-    shape: Shape,
-    u: f32,
-    v: f32,
-    did_hit: bool,
+    pub time: f32, // the travel distance of the ray??
+    pub normal: Vector,
+    pub point: Point,
+    pub escaped_point: Point,
 }
 
 impl HitPoint {
-    pub fn new(ray: Ray, time: f32, normal: Vector, material: Material, shape: Shape, u: f32, v: f32, did_hit: bool) -> Self {
-        Self { ray, time, normal, material, shape, u, v, did_hit }
-    }
+    pub fn new(time: f32, old_normal: Vector, ray: &Ray) -> Self {
+        let normal = if ray.direction.dot_product(&old_normal) > 0.0 { 
+            old_normal.negate() 
+        } else {
+            old_normal
+        };
+        let point = ray.point_at_time(time);
+        let escaped_point = point.move_point(&normal.multiply_scalar(ESCPAE_SCALAR));
 
-    /*pub fn point(&self) {
-        self.ray.
-    }*/
+        Self {time, normal, point, escaped_point}
+    }
 }

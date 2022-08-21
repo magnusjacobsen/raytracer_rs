@@ -113,6 +113,7 @@ pub fn to_uni_poly(vec: &Vec<(i32, IntSimpleExpr)>, ray_values: [f32; 6]) -> Uni
         .map(|(n, ise)|
             (*n, solve_int_simple_expr(ise, ray_values))
         )
+        .rev()
         .collect()
 }
 
@@ -132,7 +133,7 @@ pub fn solve_uni_poly(up: &UniPoly, t: f32) -> f32 {
 /*
     Returns the derivative UniPoly of the given UniPoly
 */
-pub fn derivative(up: &UniPoly) -> UniPoly {
+pub fn uni_poly_derivative(up: &UniPoly) -> UniPoly {
     up
         .iter()
         .fold(vec![], |mut acc, (n, c)|
@@ -170,7 +171,7 @@ fn negate(up: &UniPoly) -> UniPoly {
 /*
     Creates a negated UniPoly from a UniPoly slice
 */
-fn _negate(up_slice: &[(i32, f32)]) -> UniPoly {
+fn negate_slice(up_slice: &[(i32, f32)]) -> UniPoly {
     up_slice
         .iter()
         .map(|(n, c)| (*n, -c))
@@ -181,32 +182,32 @@ fn _negate(up_slice: &[(i32, f32)]) -> UniPoly {
     Subtracts one UniPoly (up2) from another (up1)
 */
 fn subtract(up1: &UniPoly, up2: &UniPoly) -> UniPoly {
-    fn inner(rest1: &[(i32, f32)], rest2: &[(i32, f32)], out: &mut UniPoly) {
-        if rest1.is_empty() {
-            if !rest2.is_empty() {
-                out.extend(_negate(rest2).iter());
+    fn inner(up1: &[(i32, f32)], up2: &[(i32, f32)], out: &mut UniPoly) {
+        if up1.is_empty() {
+            if !up2.is_empty() {
+                out.extend(negate_slice(up2).iter());
             }
         } else {
-            let (n1, c1) = rest1[0];
-            if rest2.is_empty() {
-                if c1.abs() > EPSILON {
+            let (n1, c1) = up1[0];
+            if up2.is_empty() {
+                if c1.abs() >= EPSILON {
                     out.push((n1, c1));    
                 }
-                inner(&rest1[1..], rest2, out);
+                inner(&up1[1..], up2, out);
             } else {
-                let (n2, c2) = rest2[0];
-                if n1 == n1 {
+                let (n2, c2) = up2[0];
+                if n1 == n2 {
                     let v = c1 - c2;
-                    if v.abs() > EPSILON {
+                    if v.abs() >= EPSILON {
                         out.push((n1, v));
                     }
-                    inner(&rest1[1..], &rest2[1..], out);
-                } else if n1 > n2 {
+                    inner(&up1[1..], &up2[1..], out);
+                } else if n2 < n1 {
                     out.push((n1, c1));
-                    inner(&rest1[1..], rest2, out);
+                    inner(&up1[1..], up2, out);
                 } else {
                     out.push((n2, -c2));
-                    inner(rest1, &rest2[1..], out);
+                    inner(up1, &up2[1..], out);
                 }
             }
         }

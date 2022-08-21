@@ -354,31 +354,31 @@ pub fn parse_string(s: String) -> Expr {
 /*
     Substitutes an Expr e, with another expression, ex, if the FVar's variable name matches x
 */
-pub fn subst(e: Expr, x: &str, exp: &Expr) -> Expr {
+pub fn subst(e: &Expr, x: &str, exp: &Expr) -> Expr {
     match e {
         Expr::Var(s)            => if s == x { (*exp).clone() } 
                                    else { Expr::Var(s.into()) },
         Expr::Add(a, b)         => Expr::Add(
-                                    bx!(subst(*a, x, exp)),
-                                    bx!(subst(*b, x, exp))
+                                    bx!(subst(a, x, exp)),
+                                    bx!(subst(b, x, exp))
                                    ),
         Expr::Mul(a, b)         => Expr::Mul(
-                                    bx!(subst(*a, x, exp)),
-                                    bx!(subst(*b, x, exp))
+                                    bx!(subst(a, x, exp)),
+                                    bx!(subst(b, x, exp))
                                    ),
         Expr::Exponent(a, i)    => Expr::Exponent(
-                                    bx!(subst(*a, x, exp)),
-                                    i
+                                    bx!(subst(a, x, exp)),
+                                    *i
                                    ),
         Expr::Div(a, b)         => Expr::Div(
-                                    bx!(subst(*a, x, exp)),
-                                    bx!(subst(*b, x, exp))
+                                    bx!(subst(a, x, exp)),
+                                    bx!(subst(b, x, exp))
                                    ),
         Expr::Root(a, i)        => Expr::Root(
-                                    bx!(subst(*a, x, exp)),
-                                    i
+                                    bx!(subst(a, x, exp)),
+                                    *i
                                    ),
-        _                       => e, // FNum
+        _                       => e.clone(), // FNum
     }
 }
 

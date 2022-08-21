@@ -8,7 +8,7 @@ pub mod t {
     use crate::implicit_surfaces::simple_expr::{Atom, combine, self, expr_to_simple_expr, SimpleExpr, rewrite_expr};
     use crate::implicit_surfaces::expr::{self, Expr, parse_string, subst};
 
-    fn sort_simple_expr(mut se: SimpleExpr) -> SimpleExpr {
+    fn sort_simple_expr(se: SimpleExpr) -> SimpleExpr {
         let mut out = vec![];
         for mut atom_group in se {
             atom_group.sort_by(|a,b| a.partial_cmp(&b).unwrap());
@@ -146,7 +146,7 @@ pub mod t {
         let sub_vec = vec![("x", ex), ("y", ey), ("z", ez), ("R", er)];
 
         let result_sub = sub_vec.iter()
-            .fold(sphere_expr, |acc, (var, sub)| subst(acc, var, sub));
+            .fold(sphere_expr, |acc, (var, sub)| subst(&acc, var, sub));
 
         let mut result_se = expr_to_simple_expr(result_sub.clone());
 
@@ -381,5 +381,79 @@ pub mod t {
         Ok(())
     }
 
-    
+    #[test]
+    fn rule_plus_division() -> Result<()> {
+        // case 9
+        let input = "e1 + (e2 / e3)".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![
+            vec![
+                Atom::Exponent("e3".into(), 1),
+                Atom::Exponent("e1".into(), 1)
+            ],
+            vec![Atom::Exponent("e2".into(), 1)]
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_plus_division_other_way() -> Result<()> {
+        // case 9
+        let input = "(e2 / e3) + e1".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![
+            vec![
+                Atom::Exponent("e3".into(), 1),
+                Atom::Exponent("e1".into(), 1)
+            ],
+            vec![Atom::Exponent("e2".into(), 1)]
+        ]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_division_of_divisions() -> Result<()> {
+        // case 10
+        let input = "(e1 / e2) / (e3 / e4)".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![vec![
+            Atom::Exponent("e4".into(), 1),
+            Atom::Exponent("e1".into(), 1)
+        ]]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_root_multiples() -> Result<()> {
+        // case 11
+        let input = "e_3 * e_3 * e_3".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = vec![vec![Atom::Exponent("e".into(), 1)]];
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn rule_root_fun_stuff() -> Result<()> {
+        // also case 11
+        let input = "e1_2 * e2_3".to_string();
+        let result = sort_simple_expr(rewrite_expr(parse_string(input)));
+        let expected = sort_simple_expr(vec![vec![
+            Atom::Exponent("e1".into(), 1),
+            Atom::Exponent("e1".into(), 1),
+            Atom::Exponent("e1".into(), 1),
+            Atom::Exponent("e2".into(), 1),
+            Atom::Exponent("e2".into(), 1),
+        ]]);
+
+        assert_eq!(result, expected);
+        Ok(())
+    }
 }
