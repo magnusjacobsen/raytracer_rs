@@ -48,20 +48,26 @@ impl Material for Phong {
         let dp = n * ld;
         let lc = light.get_color();
 
-
         // determine the colour
         if dp > 0.0 {
-            let specular = if r1 * -rd > 0.0 {
-                self.specular_color * self.specular_coefficient * (r1 * -rd).powi(self.specular_exponent)
+            let r1_neg_rd = r1 * (-rd);
+            let specular = if r1_neg_rd > 0.0 {
+                self.specular_color * self.specular_coefficient * r1_neg_rd.powi(self.specular_exponent)
             } else {
                 color::BLACK
             };
 
             let direction = lc * dp;
-
+            //println!("dir: {:?}", direction);
+            //println!("diff: {:?}", self.diffuse);
+            //println!("spec: {:?}\n", specular);
             (self.diffuse + specular) * direction
         } else {
             color::BLACK
         }
+    }
+
+    fn ambient_color_with_light(&self, ambient_light: &AmbientLight) -> Color {
+        self.ambient_color * self.ambient_coefficient * ambient_light.get_color()
     }
 }

@@ -2,7 +2,7 @@
 use lodepng;
 use std::path::Path;
 
-use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hitpoint::HitPoint}, lights::{point_light::PointLight, Light}, shapes::base_shape::BaseShape};
+use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hitpoint::HitPoint}, lights::{point_light::PointLight}, shapes::base_shape::BaseShape};
 
 pub struct Render {
     pub scene: Scene,
@@ -18,7 +18,7 @@ impl Render {
         match self.get_closest_hit(ray) {
             None                => self.scene.background,
             Some((hit, shape))  => {
-                let ambient_color = self.scene.ambient.get_color();
+                let ambient_color = shape.material.ambient_color_with_light(&self.scene.ambient);
                 
                 // sum the light colors (minus the shadow) for that hitpoint, and add them to the ambient color
                 self.scene.lights.iter()

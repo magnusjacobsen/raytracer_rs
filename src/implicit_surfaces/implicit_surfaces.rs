@@ -365,8 +365,11 @@ pub fn make_implicit(s: String, material: Box<dyn Material>) -> BaseShape {
     let pdz = partial_derivative(&exp, "z".into());
     // converting the Expr to a polynomial
     let poly = poly::expr_to_poly(subst_with_ray(&exp), "t".into());
+
+    //println!("POLY: {:?}\n", poly);
     // turn the poly into a vec of (i32, IntSimpleExpr) tuples
     let poly_vec = uni_poly::to_int_simple_expr_vec(poly::poly_as_list(poly));
+    //println!("POLY_VEC: {:?}\n", poly_vec);
 
     let hit_function: HitFunction = match poly_vec.last().expect("should not be empty").0 {
         1 => hit_function_first_degree(poly_vec, pdx, pdy, pdz),
@@ -374,6 +377,8 @@ pub fn make_implicit(s: String, material: Box<dyn Material>) -> BaseShape {
         _ => hit_function_higher_degree(poly_vec, pdx, pdy, pdz),
     };
     
+    //println!("so far so good");
+
     let is_inside = Box::pin(
         move |p: &Point| expr::solve_expr(&exp, &p) > 0.0
     );

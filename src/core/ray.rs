@@ -20,6 +20,10 @@ impl Ray {
     pub fn point_at_time(&self, t: f32) -> Point {
         self.origin + self.direction * t
     }
+
+    /*pub fn time_at_point(&self, p: &Point) -> f32 {
+        (*p - self.origin).z / self.direction.z
+    }*/
 }
 
 impl PartialEq for Ray {

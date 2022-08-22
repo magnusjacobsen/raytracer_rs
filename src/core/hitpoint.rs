@@ -14,6 +14,7 @@ pub struct HitPoint {
 impl HitPoint {
     pub fn new(time: f32, normal: Vector, ray: &Ray) -> Self {
         let normal = if ray.direction * normal > 0.0 { 
+            // not sure if this ever happens
             -normal 
         } else {
             normal

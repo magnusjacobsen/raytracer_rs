@@ -272,7 +272,7 @@ pub fn sturm_seq(up: &UniPoly, derivative: &UniPoly) -> Vec<UniPoly> {
 /*
     Counts sign changes in a UniPoly Vec, for a given value inserted in the variable's place
 */
-fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f32) -> u32 {
+fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f32) -> i32 {
     let mut prev = solve_uni_poly(&up_vec[0], t);
     let mut count = 0;
     for i in 1..up_vec.len() {
@@ -294,17 +294,22 @@ fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f32) -> u32 {
 */
 pub fn get_interval(up_vec: &Vec<UniPoly>, lo: f32, hi: f32, depth: i32) -> Option<(f32, f32)> {
     if depth <= 0 {
+        println!("returning some");
         Some((lo, hi))
     } else {
+        println!("\n{:?}\nlo: {}, hi: {}, depth: {}", up_vec, lo, hi, depth);
         let mid = lo + (hi - lo) / 2.0;
         let lo_diff = count_sign_changes(&up_vec, lo) - count_sign_changes(&up_vec, mid);
+        println!("lo_diff: {}", lo_diff);
         if lo_diff > 0 {
             get_interval(up_vec, lo, mid, depth - 1)
         } else {
             let hi_diff = count_sign_changes(&up_vec, mid) - count_sign_changes(&up_vec, hi);
+            println!("hi_diff: {}", hi_diff);
             if hi_diff > 0 {
                 get_interval(up_vec, mid, hi, depth - 1)
             } else {
+                println!("returning none");
                 None
             }
         }

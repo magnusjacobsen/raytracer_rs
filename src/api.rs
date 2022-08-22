@@ -1,4 +1,4 @@
-use crate::{lights::{point_light::PointLight, ambient_light::AmbientLight}, core::{color::{Color, self}, point::Point, vector::Vector}, shapes::base_shape::BaseShape, scene::Scene, implicit_surfaces::implicit_surfaces, camera::pinhole::PinholeCamera, render::Render, materials::phong::Phong, bx};
+use crate::{lights::{point_light::PointLight, ambient_light::AmbientLight}, core::{color::{Color, self}, point::Point, vector::Vector}, shapes::base_shape::BaseShape, scene::Scene, implicit_surfaces::implicit_surfaces, camera::pinhole::PinholeCamera, render::Render, materials::{phong::Phong, matte::Matte}, bx};
 
 pub fn make_scene(shape: BaseShape) -> Scene {
     let light = make_light(color::WHITE, 0.5, Point::new(4.0, 2.0, 4.0));
@@ -17,6 +17,7 @@ pub fn make_scene(shape: BaseShape) -> Scene {
 pub fn sphere1(r: f32, _num_samples: i32) -> Render {
     let main_color = color::FUCHSIA;
     let white = color::WHITE;
+    //let material = Matte::new(main_color, 1.0, main_color, 1.0);
     let material = Phong::new(main_color, 0.2, main_color, 0.8, white, 0.7, 100);
     // mkPhongMaterial aqua 0.2 aqua 0.8 white 0.7 100
 
@@ -31,6 +32,23 @@ pub fn sphere1(r: f32, _num_samples: i32) -> Render {
         3.0,
         1024,
         768
+    );
+    let scene = make_scene(s);
+    Render::new(scene, camera)
+}
+
+pub fn torus(r: f32, rr: f32) -> Render {
+    let material = Matte::new(color::BLUE, 1.0, color::BLUE, 1.0);
+    let s = implicit_surfaces::make_implicit(format!("(((x^2 + y^2)_2 - {r})^2 + z^2)_2 - {rr}"), bx!(material));
+    let camera = PinholeCamera::new(
+        Point::new(0.0, 0.0, 4.0), 
+        Point::new(0.0, 0.0, 0.0),
+        Vector::new(0.0, 1.0, 0.0),
+        2.0, 
+        4.0, 
+        4.0,
+        500, 
+        500
     );
     let scene = make_scene(s);
     Render::new(scene, camera)

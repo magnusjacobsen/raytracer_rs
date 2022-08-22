@@ -14,6 +14,6 @@ pub mod scene;
 pub mod render;
 
 fn main() {
-    let render = sphere1(1.0, 4);
+    let render = api::torus(1.0, 1.0);
     render.save_image("hello world");
 }

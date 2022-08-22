@@ -18,14 +18,6 @@ impl Matte {
             ambient_color, ambient_coefficient, diffuse,
         }
     }
-
-    pub fn ambient_color_with_light(&self, ambient_light: AmbientLight) -> Color {
-        self.ambient_color * self.ambient_coefficient * ambient_light.get_color()
-    }
-
-    pub fn reflection_factor(&self) -> Color {
-        color::WHITE
-    }
 }
 
 impl Material for Matte {
@@ -43,5 +35,9 @@ impl Material for Matte {
         } else {
             color::BLACK
         }
+    }
+
+    fn ambient_color_with_light(&self, ambient_light: &AmbientLight) -> Color {
+        self.ambient_color * self.ambient_coefficient * ambient_light.get_color()
     }
 }
