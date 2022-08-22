@@ -216,8 +216,9 @@ fn hit_function_first_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy
         if t < 0.0 {
             None
         } else {
-            let time_point = ray.point_at_time(t);
-            let hit = HitPoint::new(t, normal_vector(&time_point, &pdx, &pdy, &pdz), &ray);
+            let point_time = ray.point_at_time(t);
+            let normal = normal_vector(&point_time, &pdx, &pdy, &pdz);
+            let hit = HitPoint::new(t, normal, &ray);
             Some(hit)
         }
     };
@@ -265,9 +266,10 @@ fn hit_function_second_degree(mut poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pd
             if ts.is_empty() {
                 None
             } else {
-                let dt = if ts[0] < ts[1] { ts[0] } else { ts[1] };
-                let time_point = ray.point_at_time(*dt);
-                let hit = HitPoint::new(*dt, normal_vector(&time_point, &pdx, &pdy, &pdz), &ray);
+                let min_t = if ts[0] < ts[1] { *ts[0] } else { *ts[1] };
+                let point_time = ray.point_at_time(min_t);
+                let normal = normal_vector(&point_time, &pdx, &pdy, &pdz);
+                let hit = HitPoint::new(min_t, normal, &ray);
                 Some(hit)
             }
         }
@@ -323,8 +325,9 @@ fn hit_function_higher_degree(poly: Vec<(i32, IntSimpleExpr)>, pdx: Expr, pdy: E
                                 hi = mid;
                                 continue;
                             } else {
-                                let time_point = ray.point_at_time(t);
-                                let hit = HitPoint::new(t, normal_vector(&time_point, &pdx, &pdy, &pdz), &ray);
+                                let point_time = ray.point_at_time(t);
+                                let normal = normal_vector(&point_time, &pdx, &pdy, &pdz);
+                                let hit = HitPoint::new(t, normal, &ray);
                                 return Some(hit);
                             }
                     }

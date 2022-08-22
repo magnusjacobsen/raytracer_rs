@@ -18,7 +18,7 @@ impl Ray {
     }
 
     pub fn point_at_time(&self, t: f32) -> Point {
-        self.origin.move_point(&self.direction.multiply_scalar(t))
+        self.origin + self.direction * t
     }
 }
 

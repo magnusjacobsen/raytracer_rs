@@ -1,4 +1,4 @@
-use crate::core::{color::Color, point::Point, vector::Vector, ray::Ray};
+use crate::core::{color::Color, point::Point, vector::Vector, ray::Ray, hitpoint::HitPoint};
 
 use super::Light;
 
@@ -14,19 +14,20 @@ impl PointLight {
         Self {color, intensity, position}
     }
 
-    pub fn get_direction_from_point(&self, p: &Point) -> Vector {
-        self.position.subtract(p).normalize()
+    pub fn get_direction_from_point(&self, hit_point: &HitPoint) -> Vector {
+        (self.position - hit_point.point).normalize()
     }
 
-    pub fn get_shadow_ray(&self, p: &Point) -> Ray {
-        let direction = self.get_direction_from_point(p);
+    pub fn get_shadow_ray(&self, hit_point: &HitPoint) -> Ray {
+        let p = hit_point.escaped_point.clone();
+        let direction = (self.position - p).normalize();
         
-        Ray::new(p.clone(), direction)
+        Ray::new(p, direction)
     }
 }
 
 impl Light for PointLight {
     fn get_color(&self) -> Color {
-        self.color.scale(self.intensity)
+        self.color * self.intensity
     }
 }

@@ -1,9 +1,10 @@
 use std::fmt::{Display, Formatter, Result};
 use std::cmp::PartialEq;
+use std::ops::{Sub, Mul, Div, Add};
 
 use super::vector::Vector;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -19,7 +20,7 @@ impl Point {
         Self {x: 0.0, y: 0.0, z: 0.0}
     }
 
-    pub fn move_point(&self, v: &Vector) -> Self {
+    fn move_point(&self, v: &Vector) -> Self {
         Self::new(
             self.x + v.x, 
             self.y + v.y, 
@@ -27,19 +28,11 @@ impl Point {
         )
     }
 
-    pub fn subtract(&self, other: &Self) -> Vector {
+    fn subtract(&self, other: &Self) -> Vector {
         Vector::new(
             self.x - other.x,
             self.y - other.y,
             self.z - other.z
-        )
-    }
-
-    pub fn add(&self, other: &Self) -> Self {
-        Self::new(
-            self.x + other.x,
-            self.y + other.y,
-            self.z + other.z,
         )
     }
 
@@ -63,4 +56,61 @@ impl PartialEq for Point {
 }
 
 impl Eq for Point {}
+ 
+/*
+    Operator overloading
+*/
 
+impl Add<Vector> for Point {
+    type Output = Self;
+    fn add(self, rhs: Vector) -> Self::Output {
+        self.move_point(&rhs)
+    }
+}
+
+impl Sub<Vector> for Point {
+    type Output = Self;
+    fn sub(self, rhs: Vector) -> Self::Output {
+        self + (-rhs)
+    }
+}
+
+impl Sub for Point {
+    type Output = Vector;
+    fn sub(self, rhs: Self) -> Vector {
+        self.subtract(&rhs)
+    }
+}
+
+impl Mul<f32> for Point {
+    type Output = Self;
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self::new(
+            self.x * rhs,
+            self.y * rhs,
+            self.z * rhs,
+        )
+    }
+}
+
+impl Sub<f32> for Point {
+    type Output = Self;
+    fn sub(self, rhs: f32) -> Self::Output {
+        Self::new(
+            self.x - rhs,
+            self.y - rhs,
+            self.z - rhs,
+        )
+    }
+}
+
+impl Div<f32> for Point {
+    type Output = Self;
+    fn div(self, rhs: f32) -> Self::Output {
+        Self::new(
+            self.x / rhs,
+            self.y / rhs,
+            self.z / rhs,
+        )
+    }
+}

@@ -15,6 +15,6 @@ impl AmbientLight {
 
 impl Light for AmbientLight {
     fn get_color(&self) -> Color {
-        self.color.scale(self.intensity)
+        self.color * self.intensity
     }
 }

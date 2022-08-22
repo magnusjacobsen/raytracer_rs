@@ -12,14 +12,14 @@ pub struct HitPoint {
 }
 
 impl HitPoint {
-    pub fn new(time: f32, old_normal: Vector, ray: &Ray) -> Self {
-        let normal = if ray.direction.dot_product(&old_normal) > 0.0 { 
-            old_normal.negate() 
+    pub fn new(time: f32, normal: Vector, ray: &Ray) -> Self {
+        let normal = if ray.direction * normal > 0.0 { 
+            -normal 
         } else {
-            old_normal
+            normal
         };
         let point = ray.point_at_time(time);
-        let escaped_point = point.move_point(&normal.multiply_scalar(ESCPAE_SCALAR));
+        let escaped_point = point + normal * ESCPAE_SCALAR;
 
         Self {time, normal, point, escaped_point}
     }

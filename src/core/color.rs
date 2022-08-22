@@ -1,3 +1,5 @@
+use std::ops::{Add, Sub, Mul, Div};
+
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
     pub r: f32,
@@ -5,6 +7,7 @@ pub struct Color {
     pub b: f32,
 }
 
+// predefined colors
 pub const WHITE: Color = Color {r: 1.0, g: 1.0, b: 1.0};
 pub const ZERO: Color = Color {r: 0.0, g: 0.0, b: 0.0};
 pub const BLACK: Color = Color {r: 0.0, g: 0.0, b: 0.0};
@@ -24,11 +27,15 @@ impl Color {
         Self {r, g, b}
     }
 
-    pub fn scale(&self, s: f32) -> Color {
+    fn scale(&self, s: f32) -> Self {
         if s <= 0.0 {
             WHITE
         } else {
-            Color::new(self.r * s, self.g * s, self.b * s)
+            Self::new(
+                self.r * s, 
+                self.g * s, 
+                self.b * s,
+            )
         }
     }
 
@@ -45,39 +52,68 @@ impl Color {
         (self.r + self.g + self.b) * 3.0
     }
 
-    pub fn add(&self, other: Color) -> Color {
-        Color::new(
-            (self.r + other.r).min(1.0), 
-            (self.g + other.g).min(1.0), 
-            (self.b + other.b).min(1.0),
-        )
-    }
-
-    pub fn subtract(&self, other: Color) -> Color {
-        Color::new(
-            (self.r - other.r).max(0.0),
-            (self.g - other.g).max(0.0),
-            (self.b - other.b).max(0.0),
-        )
-    }
-
-    pub fn multiply(&self, other: Color) -> Color {
-        Color::new(
-            self.r * other.r,
-            self.g * other.g,
-            self.b * other.b,
-        )
-    }
-
-    pub fn scale_division(&self, s: f32) -> Color {
-        self.scale(1.0 / s)
-    }
-
     pub fn to_u8_vec(&self) -> Vec<u8> {
         vec![
             (self.r * 255.0) as u8,
             (self.g * 255.0) as u8,
             (self.b * 255.0) as u8,
         ]
+    }
+}
+
+/*
+    Operator overloading
+*/
+impl Add for Color {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.r + rhs.r,
+            self.g + rhs.g,
+            self.b + rhs.b,
+        )
+    }
+}
+
+impl Sub for Color {
+    type Output = Self;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self::new(
+            (self.r - rhs.r).max(0.0),
+            (self.g - rhs.g).max(0.0),
+            (self.b - rhs.b).max(0.0),
+        )
+    }
+}
+
+impl Mul for Color {
+    type Output = Self;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self::new(
+            self.r * rhs.r,
+            self.g * rhs.g,
+            self.b * rhs.b,
+        )
+    }
+}
+
+impl Mul<f32> for Color {
+    type Output = Self;
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.scale(rhs)
+    }
+}
+
+impl Div<f32> for Color {
+    type Output = Self;
+    fn div(self, rhs: f32) -> Self::Output {
+        self.scale(1.0 / rhs)
+    }
+}
+
+impl Div<i32> for Color {
+    type Output = Self;
+    fn div(self, rhs: i32) -> Self::Output {
+        self.scale(1.0 / rhs as f32)
     }
 }

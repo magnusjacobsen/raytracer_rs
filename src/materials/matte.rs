@@ -13,16 +13,14 @@ pub struct Matte {
 
 impl Matte {
     pub fn new(ambient_color: Color, ambient_coefficient: f32, matte_color: Color, matte_coefficient: f32) -> Self {
-        let diffuse = matte_color.scale(matte_coefficient).scale(PI_DIVIDED);
+        let diffuse = (matte_color * matte_coefficient) * PI_DIVIDED;
         Self {
             ambient_color, ambient_coefficient, diffuse,
         }
     }
 
     pub fn ambient_color_with_light(&self, ambient_light: AmbientLight) -> Color {
-        self.ambient_color
-            .scale(self.ambient_coefficient)
-            .multiply(ambient_light.get_color())
+        self.ambient_color * self.ambient_coefficient * ambient_light.get_color()
     }
 
     pub fn reflection_factor(&self) -> Color {
@@ -31,12 +29,17 @@ impl Matte {
 }
 
 impl Material for Matte {
-    fn bounce(&self, hit_point: &HitPoint, light: &PointLight, ray: &Ray) -> Color {
-        let dot_product = hit_point.normal.dot_product(&light.get_direction_from_point(&hit_point.point));
+    fn bounce(&self, hit_point: &HitPoint, light: &PointLight, _ray: &Ray) -> Color {
+        let ld = light.get_direction_from_point(&hit_point);
+        let n = hit_point.normal.clone();
+
+        let dp = n * ld;
+        let lc = light.get_color();
 
         // determine the colour
-        if dot_product > 0.0 {
-            light.get_color().scale(dot_product).multiply(self.diffuse)
+        if dp > 0.0 {
+            let roundness = lc * dp;
+            roundness * self.diffuse
         } else {
             color::BLACK
         }

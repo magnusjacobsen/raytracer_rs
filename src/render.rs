@@ -23,17 +23,16 @@ impl Render {
                 // sum the light colors (minus the shadow) for that hitpoint, and add them to the ambient color
                 self.scene.lights.iter()
                     .fold(ambient_color, |color, light| {
-                        color.add(
-                            shape.material.bounce(&hit, &light, &ray)
-                                .subtract(self.cast_shadow(&hit, light))
-                        )
+                        let light_color = shape.material.bounce(&hit, &light, &ray);
+                        let shadow_color = self.cast_shadow(&hit, light);
+                        color + (light_color - shadow_color)
                     })
             },
         }
     }
 
     fn cast_shadow(&self, hit_point: &HitPoint, light: &PointLight) -> Color {
-        let shadow_ray = light.get_shadow_ray(&hit_point.escaped_point);
+        let shadow_ray = light.get_shadow_ray(&hit_point);
 
         if let Some((new_hit, _)) = self.get_closest_hit(&shadow_ray) {
             if new_hit.time < light.position.distance(&hit_point.point).magnitude {
@@ -79,12 +78,11 @@ impl Render {
         .iter()
         .for_each(|(x, y)| {
             let rays = self.camera.create_rays(*x, *y);
-            let len = rays.len() as f32;
             let color = rays
                 .iter()
                 .fold(color::BLACK, |color, ray|
-                    color.add(self.cast(ray).scale_division(len))
-                );
+                    color + self.cast(ray)
+                ); rays.len() as f32;
             buffer[*y][*x] = color
         });
 
