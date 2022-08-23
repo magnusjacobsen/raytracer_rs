@@ -16,13 +16,13 @@ pub enum Terminal {
     Lpar,
     Rpar,
     Int(i32),
-    Float(f32),
+    Float(f64),
     Var(String),
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
-    Num(f32),
+    Num(f64),
     Var(String),
     Add(Box<Expr>, Box<Expr>),
     Mul(Box<Expr>, Box<Expr>),
@@ -52,8 +52,8 @@ fn int_val(c: char) -> i32 {
     c.to_digit(10).expect("Could not transform char to int") as i32
 }
 
-fn float_val(c: char) -> f32 {
-    int_val(c) as f32
+fn float_val(c: char) -> f64 {
+    int_val(c) as f64
 }
 
 /*************
@@ -112,7 +112,7 @@ fn apply_negates(inp: &[Terminal], mut out: Vec<Terminal>) -> Vec<Terminal> {
 /*
     Scans for a Float
 */
-fn scan_frac(cs: &[char], value: f32, wt: f32) -> (&[char], Terminal) {
+fn scan_frac(cs: &[char], value: f64, wt: f64) -> (&[char], Terminal) {
     if cs.len() > 0 && is_digit(cs[0]) {
         scan_frac(&cs[1..], value + wt * float_val(cs[0]), wt / 10.0)
     } else {
@@ -125,7 +125,7 @@ fn scan_frac(cs: &[char], value: f32, wt: f32) -> (&[char], Terminal) {
 */
 fn scan_num(cs: &[char], value: i32) -> (&[char], Terminal) {
     if cs.len() > 1 && cs[0] == '.' && is_digit(cs[1]) {
-        scan_frac(&cs[1..], value as f32, 0.1)
+        scan_frac(&cs[1..], value as f64, 0.1)
     } else if cs.len() > 0 && is_digit(cs[0]) {
         scan_num(&cs[1..], 10 * value + int_val(cs[0]))
     } else {
@@ -312,7 +312,7 @@ fn fopt((ts, in_value): ParseIntm) -> ParseIntm {
 fn p(ts: &[Terminal]) -> ParseIntm {
     match &ts[0] {
         Terminal::Float(f)  => (&ts[1..], Expr::Num(*f)),
-        Terminal::Int(i)    => (&ts[1..], Expr::Num(*i as f32)),
+        Terminal::Int(i)    => (&ts[1..], Expr::Num(*i as f64)),
         Terminal::Var(x)    => (&ts[1..], Expr::Var(x.clone())),
         Terminal::Lpar      => {
             let (ts1, ev) = e(&ts[1..]);
@@ -433,7 +433,7 @@ fn reduce_exp(ex1: Expr, n: i32, changed: bool) -> (Expr, bool) {
 
 fn reduce_root(ex1: Expr, n: i32, changed: bool) -> (Expr, bool) {
     match ex1 {
-        Expr::Num(c) => (Expr::Num(c.powf(1.0 / n as f32)), true),
+        Expr::Num(c) => (Expr::Num(c.powf(1.0 / n as f64)), true),
         _ => {
             let (new_ex1, new_changed) = reduce_expr_rec(ex1, changed);
             (Expr::Root(bx!(new_ex1), n), new_changed)
@@ -467,14 +467,14 @@ pub fn reduce_expr(exp: Expr) -> Expr {
 /*
     Given a point, with values for x, y, and z, solves the expression
 */
-pub fn solve_expr(exp: &Expr, p: &Point) -> f32 {
+pub fn solve_expr(exp: &Expr, p: &Point) -> f64 {
     match exp {
         Expr::Num(c)            => *c,
         Expr::Add(e1, e2)       => solve_expr(e1, p) + solve_expr(e2, p),
         Expr::Mul(e1, e2)       => solve_expr(e1, p) * solve_expr(e2, p),
         Expr::Div(e1, e2)       => solve_expr(e1, p) / solve_expr(e2, p),
         Expr::Exponent(e1, n)   => (solve_expr(e1, p)).powi(*n),
-        Expr::Root(e1, n)       => (solve_expr(e1, p)).powf(1.0 / *n as f32),
+        Expr::Root(e1, n)       => (solve_expr(e1, p)).powf(1.0 / *n as f64),
         Expr::Var(s)            =>
             match s.as_str() {
                 "x" => p.x,

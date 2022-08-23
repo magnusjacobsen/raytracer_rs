@@ -1,25 +1,25 @@
-use crate::{core::{color::{Color, self}, hitpoint::HitPoint, ray::Ray}, lights::{ambient_light::AmbientLight, point_light::PointLight, Light}};
+use crate::{core::{color::{Color, self}, hit_point::HitPoint, ray::Ray}, lights::{ambient_light::AmbientLight, point_light::PointLight, Light}};
 
 use super::{PI_DIVIDED, Material};
 
 pub struct Phong {
     ambient_color: Color,
-    ambient_coefficient: f32,
+    ambient_coefficient: f64,
     //matte_color: Color,
-    //matte_coefficient: f32,
+    //matte_coefficient: f64,
     specular_color: Color,
-    specular_coefficient: f32,
+    specular_coefficient: f64,
     specular_exponent: i32,
     diffuse: Color,
 }
 
 impl Phong {
     pub fn new(ambient_color: Color,
-        ambient_coefficient: f32,
+        ambient_coefficient: f64,
         matte_color: Color,
-        matte_coefficient: f32,
+        matte_coefficient: f64,
         specular_color: Color,
-        specular_coefficient: f32,
+        specular_coefficient: f64,
         specular_exponent: i32) -> Self {
         
         let diffuse = (matte_color * matte_coefficient) * PI_DIVIDED;
@@ -27,10 +27,6 @@ impl Phong {
         Self {
             ambient_color, ambient_coefficient, specular_color, specular_coefficient, specular_exponent, diffuse,
         }
-    }
-
-    pub fn ambient_color_with_light(&self, ambient_light: AmbientLight) -> Color {
-        self.ambient_color * self.ambient_coefficient * ambient_light.get_color()
     }
 
     pub fn reflection_factor(&self) -> Color {

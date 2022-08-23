@@ -1,18 +1,18 @@
-use crate::{core::{color::{Color, self}, hitpoint::HitPoint, ray::Ray}, lights::{ambient_light::AmbientLight, Light, point_light::PointLight}};
+use crate::{core::{color::{Color, self}, hit_point::HitPoint, ray::Ray}, lights::{ambient_light::AmbientLight, Light, point_light::PointLight}};
 
 use super::{Material, PI_DIVIDED};
 
 // just a Matte material
 pub struct Matte {
     ambient_color: Color,
-    ambient_coefficient: f32,
+    ambient_coefficient: f64,
     //matte_color: Color,
-    //matte_coefficient: f32,
+    //matte_coefficient: f64,
     diffuse: Color,
 }
 
 impl Matte {
-    pub fn new(ambient_color: Color, ambient_coefficient: f32, matte_color: Color, matte_coefficient: f32) -> Self {
+    pub fn new(ambient_color: Color, ambient_coefficient: f64, matte_color: Color, matte_coefficient: f64) -> Self {
         let diffuse = (matte_color * matte_coefficient) * PI_DIVIDED;
         Self {
             ambient_color, ambient_coefficient, diffuse,

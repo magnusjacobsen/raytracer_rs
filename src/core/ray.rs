@@ -17,11 +17,11 @@ impl Ray {
         Self {origin: Point::zero(), direction: Vector::zero()}
     }
 
-    pub fn point_at_time(&self, t: f32) -> Point {
+    pub fn point_at_time(&self, t: f64) -> Point {
         self.origin + self.direction * t
     }
 
-    /*pub fn time_at_point(&self, p: &Point) -> f32 {
+    /*pub fn time_at_point(&self, p: &Point) -> f64 {
         (*p - self.origin).z / self.direction.z
     }*/
 }

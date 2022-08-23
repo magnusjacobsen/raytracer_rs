@@ -6,13 +6,13 @@ use super::vector::Vector;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Point {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Point {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self {x, y, z}
     }
 
@@ -82,9 +82,9 @@ impl Sub for Point {
     }
 }
 
-impl Mul<f32> for Point {
+impl Mul<f64> for Point {
     type Output = Self;
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         Self::new(
             self.x * rhs,
             self.y * rhs,
@@ -93,9 +93,9 @@ impl Mul<f32> for Point {
     }
 }
 
-impl Sub<f32> for Point {
+impl Sub<f64> for Point {
     type Output = Self;
-    fn sub(self, rhs: f32) -> Self::Output {
+    fn sub(self, rhs: f64) -> Self::Output {
         Self::new(
             self.x - rhs,
             self.y - rhs,
@@ -104,9 +104,9 @@ impl Sub<f32> for Point {
     }
 }
 
-impl Div<f32> for Point {
+impl Div<f64> for Point {
     type Output = Self;
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: f64) -> Self::Output {
         Self::new(
             self.x / rhs,
             self.y / rhs,

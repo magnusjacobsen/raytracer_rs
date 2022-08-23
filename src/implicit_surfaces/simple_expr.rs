@@ -13,7 +13,7 @@ use crate::implicit_surfaces::expr::Expr;
 */
 #[derive(Clone, Debug, PartialOrd)]
 pub enum Atom {
-    Num(f32),
+    Num(f64),
     Exponent(String, i32),
     Root(Box<SimpleExpr>, i32)
 }
@@ -97,7 +97,7 @@ fn atom_to_se(atom: Atom) -> SimpleExpr {
     vec![vec![atom]]
 }
 
-pub fn se_num(c: f32) -> SimpleExpr {
+pub fn se_num(c: f64) -> SimpleExpr {
     atom_to_se(Atom::Num(c))
 }
 
@@ -345,7 +345,7 @@ fn simplify_expr_exp(e1: Expr, n: i32, changed: bool) -> (Expr, bool) {
 fn simplify_expr_root(e1: Expr, n: i32, changed: bool) -> (Expr, bool) {
     match e1 {
         // constant
-        Expr::Num(c1) => (Expr::Num(c1.powf(1.0 / n as f32)), true),
+        Expr::Num(c1) => (Expr::Num(c1.powf(1.0 / n as f64)), true),
         // simple recursive situation
         e1 => {
             let (new_e1, new_changed) = simplify_expr_rec(e1, changed);

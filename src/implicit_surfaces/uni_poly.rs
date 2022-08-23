@@ -2,7 +2,7 @@ use super::simple_expr::{SimpleExpr, Atom};
 
 // Very small number. Considered as good as zero
 // 10^-20
-const EPSILON: f32 = 0.000000000000000000001;
+const EPSILON: f64 = 0.00000000000000000001;
 
 /*
     Similar to SimpleExpr, AtomgGroup and Atom
@@ -18,7 +18,7 @@ const EPSILON: f32 = 0.000000000000000000001;
 */
 #[derive(Clone, Debug)]
 pub enum IntAtom {
-    Num(f32),
+    Num(f64),
     Exponent(usize, i32),
 }
 
@@ -29,12 +29,12 @@ pub type IntSimpleExpr = Vec<IntAtomGroup>;
 /*
     UniPoly represents an univariate polynomial, ie. only one variable, t, which is implicitly present in all map elements of a Poly
 */
-pub type UniPoly = Vec<(i32, f32)>;
+pub type UniPoly = Vec<(i32, f64)>;
 
 /*
     Turns a SimpleExpr into an IntSimpleExpr
 */
-fn to_int_simple_expr(se: &SimpleExpr) -> IntSimpleExpr {
+pub fn to_int_simple_expr(se: &SimpleExpr) -> IntSimpleExpr {
     se
         .into_iter()
         .map(|ag|
@@ -77,7 +77,7 @@ pub fn to_int_simple_expr_vec(se_vec: Vec<(i32, SimpleExpr)>) -> Vec<(i32, IntSi
 
     Returns ?
 */
-pub fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f32; 6]) -> f32 {
+pub fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f64; 6]) -> f64 {
     ise
         .iter()
         .map(|ag|
@@ -89,7 +89,7 @@ pub fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f32; 6]) -> f32 {
                         IntAtom::Exponent(e, x) => ray_values[*e].powi(*x),
                     }
                 )
-                .product::<f32>()
+                .product::<f64>()
         )
         .sum()
 }
@@ -107,7 +107,7 @@ pub fn solve_int_simple_expr(ise: &IntSimpleExpr, ray_values: [f32; 6]) -> f32 {
 
     also, when is this used???
     */
-pub fn to_uni_poly(vec: &Vec<(i32, IntSimpleExpr)>, ray_values: [f32; 6]) -> UniPoly {
+pub fn to_uni_poly(vec: &Vec<(i32, IntSimpleExpr)>, ray_values: [f64; 6]) -> UniPoly {
     vec
         .iter()
         .map(|(n, ise)|
@@ -120,7 +120,7 @@ pub fn to_uni_poly(vec: &Vec<(i32, IntSimpleExpr)>, ray_values: [f32; 6]) -> Uni
 /*
     Solves an UniPoly for a given t value
 */
-pub fn solve_uni_poly(up: &UniPoly, t: f32) -> f32 {
+pub fn solve_uni_poly(up: &UniPoly, t: f64) -> f64 {
     up
         .iter()
         .map(|(n, c)|
@@ -140,7 +140,7 @@ pub fn uni_poly_derivative(up: &UniPoly) -> UniPoly {
             if *n == 0 {
                 acc
             } else {
-                acc.push((*n - 1, *n as f32 * *c));
+                acc.push((*n - 1, *n as f64 * *c));
                 acc
             }
         )
@@ -149,7 +149,7 @@ pub fn uni_poly_derivative(up: &UniPoly) -> UniPoly {
 /*
     Multiplies an UniPoly with a term (of a constant and an exponent)
 */
-fn multiply(up: &UniPoly, (exp, con): (i32, f32)) -> UniPoly {
+fn multiply(up: &UniPoly, (exp, con): (i32, f64)) -> UniPoly {
     up
         .iter()
         .map(|(n, c)|
@@ -169,51 +169,45 @@ fn negate(up: &UniPoly) -> UniPoly {
 }
 
 /*
-    Creates a negated UniPoly from a UniPoly slice
-*/
-fn negate_slice(up_slice: &[(i32, f32)]) -> UniPoly {
-    up_slice
-        .iter()
-        .map(|(n, c)| (*n, -c))
-        .collect()
-}
-
-/*
     Subtracts one UniPoly (up2) from another (up1)
 */
 fn subtract(up1: &UniPoly, up2: &UniPoly) -> UniPoly {
-    fn inner(up1: &[(i32, f32)], up2: &[(i32, f32)], out: &mut UniPoly) {
-        if up1.is_empty() {
-            if !up2.is_empty() {
-                out.extend(negate_slice(up2).iter());
-            }
+    let len1 = up1.len();
+    let len2 = up2.len();
+    let mut idx1 = 0;
+    let mut idx2 = 0;
+    let mut out = vec![];
+
+    while idx1 < len1 || idx2 < len2 {
+        if idx1 == len1 {
+            out.extend(&up2[idx2..]);
+            idx2 = len2;
         } else {
-            let (n1, c1) = up1[0];
-            if up2.is_empty() {
+            let (n1, c1) = up1[idx1];
+            if idx2 == len2 {
                 if c1.abs() >= EPSILON {
-                    out.push((n1, c1));    
+                    out.push((n1, c1));
                 }
-                inner(&up1[1..], up2, out);
+                idx1 += 1;
             } else {
-                let (n2, c2) = up2[0];
+                let (n2, c2) = up2[idx2];
                 if n1 == n2 {
                     let v = c1 - c2;
                     if v.abs() >= EPSILON {
                         out.push((n1, v));
                     }
-                    inner(&up1[1..], &up2[1..], out);
+                    idx1 += 1;
+                    idx2 += 1;
                 } else if n2 < n1 {
                     out.push((n1, c1));
-                    inner(&up1[1..], up2, out);
+                    idx1 += 1;
                 } else {
                     out.push((n2, -c2));
-                    inner(up1, &up2[1..], out);
+                    idx2 += 1;
                 }
             }
         }
     }
-    let mut out = vec![];
-    inner(&up1, &up2, &mut out);
     out
 }
 
@@ -253,26 +247,22 @@ fn long_division_remainder(f: &UniPoly, s: &UniPoly) -> UniPoly {
     Generates a Sturm sequence chain for an UniPoly and its derivate
 */
 pub fn sturm_seq(up: &UniPoly, derivative: &UniPoly) -> Vec<UniPoly> {
-    fn inner(mut up_vec: Vec<UniPoly>) -> Vec<UniPoly> {
-        let last = up_vec.len() - 1;
-        // degree of last element of the Vec
-        match up_vec[last][0].0 {
-            0 => up_vec,
-            _ => {
-                let new_up = negate(&long_division_remainder(&up_vec[last - 1], &up_vec[last]));
-                up_vec.push(new_up);
-                inner(up_vec)
-            }
-        }
+    let mut out = vec![up.clone(), derivative.clone()];
+    let mut last = 1;
+    let mut count = 0;
+    while out[last][0].0 > 0 && count < 1000 {
+        count += 1;
+        let new_up = long_division_remainder(&out[last - 1], &out[last]);
+        out.push(negate(&new_up));
+        last += 1;
     }
-    let up_vec = vec![up.clone(), derivative.clone()];
-    inner(up_vec)
+    out
 }
 
 /*
     Counts sign changes in a UniPoly Vec, for a given value inserted in the variable's place
 */
-fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f32) -> i32 {
+fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f64) -> i32 {
     let mut prev = solve_uni_poly(&up_vec[0], t);
     let mut count = 0;
     for i in 1..up_vec.len() {
@@ -292,26 +282,27 @@ fn count_sign_changes(up_vec: &Vec<UniPoly>, t: f32) -> i32 {
 
     Runs until depth reaches 0.
 */
-pub fn get_interval(up_vec: &Vec<UniPoly>, lo: f32, hi: f32, depth: i32) -> Option<(f32, f32)> {
-    if depth <= 0 {
-        println!("returning some");
-        Some((lo, hi))
-    } else {
-        println!("\n{:?}\nlo: {}, hi: {}, depth: {}", up_vec, lo, hi, depth);
+pub fn get_interval(up_vec: &Vec<UniPoly>, lo: f64, hi: f64, depth: i32) -> Option<(f64, f64)> {
+    let mut lo = lo;
+    let mut hi = hi;
+    let mut signs_lo = count_sign_changes(&up_vec, lo);
+    let mut signs_hi = count_sign_changes(&up_vec, hi);
+    let mut depth = depth;
+    while depth > 0 {
         let mid = lo + (hi - lo) / 2.0;
-        let lo_diff = count_sign_changes(&up_vec, lo) - count_sign_changes(&up_vec, mid);
-        println!("lo_diff: {}", lo_diff);
-        if lo_diff > 0 {
-            get_interval(up_vec, lo, mid, depth - 1)
-        } else {
-            let hi_diff = count_sign_changes(&up_vec, mid) - count_sign_changes(&up_vec, hi);
-            println!("hi_diff: {}", hi_diff);
-            if hi_diff > 0 {
-                get_interval(up_vec, mid, hi, depth - 1)
-            } else {
-                println!("returning none");
-                None
-            }
+        let signs_mid = count_sign_changes(&up_vec, mid);
+        if signs_lo - signs_mid > 0 {
+            hi = mid;
+            signs_hi = signs_mid;
+            depth -= 1;
+            continue;
+        } else if signs_mid - signs_hi > 0 {
+            lo = mid;
+            signs_lo = signs_mid;
+            depth -= 1;
+            continue;
         }
+        return None;
     }
+    Some((lo, hi))
 }

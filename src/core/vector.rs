@@ -6,14 +6,14 @@ use super::point::Point;
 
 #[derive(Clone, Copy, PartialOrd)]
 pub struct Vector {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub magnitude: f32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub magnitude: f64,
 }
 
 impl Vector {
-    pub fn new(x: f32, y: f32, z: f32) -> Self {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self {x, y, z, magnitude: (x*x + y*y + z*z).sqrt()}
     }
 
@@ -21,7 +21,7 @@ impl Vector {
         Self {x: 0.0, y: 0.0, z: 0.0, magnitude: 0.0}
     }
 
-    fn multiply_scalar(&self, s: f32) -> Self {
+    fn multiply_scalar(&self, s: f64) -> Self {
         Self::new(self.x * s, self.y * s, self.z * s)
     }
 
@@ -45,7 +45,7 @@ impl Vector {
         )
     }
 
-    fn dot_product(&self, other: &Self) -> f32 { 
+    fn dot_product(&self, other: &Self) -> f64 { 
         self.x * other.x +
         self.y * other.y +
         self.z * other.z
@@ -112,9 +112,9 @@ impl Add for Vector {
     }
 }
 
-impl Add<f32> for Vector {
+impl Add<f64> for Vector {
     type Output = Self;
-    fn add(self, rhs: f32) -> Self::Output {
+    fn add(self, rhs: f64) -> Self::Output {
         Self::new(
             self.x + rhs,
             self.y + rhs,
@@ -134,16 +134,16 @@ impl Sub for Vector {
     }
 }
 
-impl Mul<f32> for Vector {
+impl Mul<f64> for Vector {
     type Output = Self;
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         self.multiply_scalar(rhs)
     }
 }
 
 impl Mul for Vector {
-    type Output = f32;
-    fn mul(self, rhs: Self) -> f32 {
+    type Output = f64;
+    fn mul(self, rhs: Self) -> f64 {
         self.dot_product(&rhs)
     }
 }
@@ -155,9 +155,9 @@ impl Rem for Vector {
     }
 }
 
-impl Div<f32> for Vector {
+impl Div<f64> for Vector {
     type Output = Self;
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: f64) -> Self::Output {
         self.multiply_scalar(1.0 / rhs)
     }
 }

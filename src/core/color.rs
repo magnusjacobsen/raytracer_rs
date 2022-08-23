@@ -2,9 +2,9 @@ use std::ops::{Add, Sub, Mul, Div};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Color {
-    pub r: f32,
-    pub g: f32,
-    pub b: f32,
+    pub r: f64,
+    pub g: f64,
+    pub b: f64,
 }
 
 // predefined colors
@@ -19,7 +19,7 @@ pub const AQUA: Color = Color {r: 0.0, g: 1.0, b: 1.0};
 pub const FUCHSIA: Color = Color {r: 1.0, g: 0.0, b: 1.0};
 
 impl Color {
-    pub fn new(r: f32, g: f32, b: f32) -> Self {
+    pub fn new(r: f64, g: f64, b: f64) -> Self {
         if r < 0.0 || g < 0.0 || b < 0.0 {
             panic!("Color::new: colors can not be negative!");
         }
@@ -27,7 +27,7 @@ impl Color {
         Self {r, g, b}
     }
 
-    fn scale(&self, s: f32) -> Self {
+    fn scale(&self, s: f64) -> Self {
         if s <= 0.0 {
             WHITE
         } else {
@@ -39,7 +39,7 @@ impl Color {
         }
     }
 
-    /*fn merge(&self, w: f32) -> Color {
+    /*fn merge(&self, w: f64) -> Color {
         if w < 0.0 || w > 1.0 {
             panic!("Color::merge: w i to small or too big");
         } else {
@@ -48,7 +48,7 @@ impl Color {
         }
     }*/
 
-    /*fn average(&self) -> f32 {
+    /*fn average(&self) -> f64 {
         (self.r + self.g + self.b) * 3.0
     }*/
 
@@ -99,16 +99,16 @@ impl Mul for Color {
     }
 }
 
-impl Mul<f32> for Color {
+impl Mul<f64> for Color {
     type Output = Self;
-    fn mul(self, rhs: f32) -> Self::Output {
+    fn mul(self, rhs: f64) -> Self::Output {
         self.scale(rhs)
     }
 }
 
-impl Div<f32> for Color {
+impl Div<f64> for Color {
     type Output = Self;
-    fn div(self, rhs: f32) -> Self::Output {
+    fn div(self, rhs: f64) -> Self::Output {
         self.scale(1.0 / rhs)
     }
 }
@@ -116,6 +116,6 @@ impl Div<f32> for Color {
 impl Div<i32> for Color {
     type Output = Self;
     fn div(self, rhs: i32) -> Self::Output {
-        self.scale(1.0 / rhs as f32)
+        self.scale(1.0 / rhs as f64)
     }
 }

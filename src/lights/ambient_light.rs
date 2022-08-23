@@ -4,11 +4,11 @@ use super::Light;
 
 pub struct AmbientLight {
     color: Color,
-    intensity: f32,
+    intensity: f64,
 }
 
 impl AmbientLight {
-    pub fn new(color: Color, intensity: f32) -> Self {
+    pub fn new(color: Color, intensity: f64) -> Self {
         Self {color, intensity}
     }
 }

@@ -1,16 +1,16 @@
-use crate::core::{color::Color, point::Point, vector::Vector, ray::Ray, hitpoint::HitPoint};
+use crate::core::{color::Color, point::Point, vector::Vector, ray::Ray, hit_point::HitPoint};
 
 use super::Light;
 
 
 pub struct PointLight {
     color: Color,
-    intensity: f32,
+    intensity: f64,
     pub position: Point,
 }
 
 impl PointLight {
-    pub fn new(color: Color, intensity: f32, position: Point) -> Self {
+    pub fn new(color: Color, intensity: f64, position: Point) -> Self {
         Self {color, intensity, position}
     }
 

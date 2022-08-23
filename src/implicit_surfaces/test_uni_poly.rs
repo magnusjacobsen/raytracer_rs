@@ -8,11 +8,11 @@ pub mod t {
     use crate::implicit_surfaces::poly::{expr_to_poly, poly_as_list};
     use crate::implicit_surfaces::uni_poly::{uni_poly_derivative, self, to_int_simple_expr_vec, UniPoly, sturm_seq};
 
-    fn to_uni_poly(s: String, v: String, ray_values: [f32; 6]) -> UniPoly {
+    fn to_uni_poly(s: String, v: &str, ray_values: [f64; 6]) -> UniPoly {
         uni_poly::to_uni_poly(
             &to_int_simple_expr_vec(
                 poly_as_list(
-                    expr_to_poly(
+                    &expr_to_poly(
                         parse_string(s), v
         ))), ray_values)
     }
@@ -23,7 +23,7 @@ pub mod t {
         let result = 
             uni_poly_derivative(
                 &to_uni_poly(
-                    input, "x".into(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]));
+                    input, "x", [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]));
         let expected = vec![
             (2, 9.0),
             (1, 6.0),
@@ -40,7 +40,7 @@ pub mod t {
         let result = 
             uni_poly_derivative(
                 &to_uni_poly(
-                    input, "x".into(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]));
+                    input, "x", [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]));
         let expected = vec![
             (2, -9.0),
             (1, -6.0),
@@ -54,7 +54,7 @@ pub mod t {
     #[test]
     fn parse_sturm_seq() -> Result<()> {
         let input = "x^4 + 2x^2 + 4x + 1".to_string();
-        let unipoly = to_uni_poly(input, "x".into(), [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
+        let unipoly = to_uni_poly(input, "x", [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
         let result = sturm_seq(&unipoly, &uni_poly_derivative(&unipoly));
         let expected = vec![
             vec![(4, 1.0), (2, 2.0), (1, 4.0), (0, 1.0)],
