@@ -131,7 +131,7 @@ impl Render {
 
     pub fn save_image(&self, _path: &str) {
         let image = self.create_image();
-        let path = &Path::new("test_file.png");
+        let path = &Path::new("out/test_file.png");
 
         lodepng::encode_file(path, &image, self.camera.res_x, self.camera.res_y, lodepng::ColorType::RGB, 8).expect("failed to write png");
     }
