@@ -23,7 +23,7 @@ pub fn _sphere1(r: f64, _num_samples: i32) -> Render {
     let c = color::BLUE;
     let material = Matte::new(c, 1.0, c, 1.0);
 
-    let r_r = 0;//r * r;
+    let r_r = r * r;
 
     let s = solving::make_implicit(format!("x^2 + y^2 + z^2 + {r_r}"), bx!(material));
     let camera = PinholeCamera::new(
@@ -43,6 +43,25 @@ pub fn _sphere1(r: f64, _num_samples: i32) -> Render {
 pub fn _torus(r: f64, rr: f64) -> Render {
     let c = color::BLUE;
     let material = Matte::new(c, 1.0, c, 1.0);
+    let s = solving::make_implicit(format!("(((x^2 + y^2)_2 - {r})^2 + z^2)_2 - {rr}"), bx!(material));
+    let camera = PinholeCamera::new(
+        Point::new(0.0, 0.0, 4.0), 
+        Point::new(0.0, 0.0, 0.0),
+        Vector::new(0.0, 1.0, 0.0),
+        2.0, 
+        4.0, 
+        4.0,
+        500, 
+        500
+    );
+    let scene = make_scene(s);
+    Render::new(scene, camera)
+}
+
+pub fn _torus_phong(r: f64, rr: f64) -> Render {
+    let main_color = color::FUCHSIA;
+    let white = color::WHITE;
+    let material = Phong::new(main_color, 0.2, main_color, 0.8, white, 0.7, 100);
     let s = solving::make_implicit(format!("(((x^2 + y^2)_2 - {r})^2 + z^2)_2 - {rr}"), bx!(material));
     let camera = PinholeCamera::new(
         Point::new(0.0, 0.0, 4.0), 

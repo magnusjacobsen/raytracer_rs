@@ -100,17 +100,17 @@ impl Render {
             if (x == self.camera.res_x / 2 && y == self.camera.res_y / 2) || (x == 0 && y == 0) {
                 //println!("x: {x}, y: {y}");
                 //println!("ray: {:?}", rays[0]);
-                println!("THIS IS IT!!!!!");
+                //println!("THIS IS IT!!!!!");
             }
             if (count * 100) / total_pixels > last {
                 last = (count * 100) / total_pixels;
-                //println!("{}%", last);
+                println!("{}%", last);
             };
-            let range = 3;
+            /*let range = 3;
             if x > self.camera.res_x / 2 - range && x < self.camera.res_x / 2 + range && y > self.camera.res_y / 2 - range && y < self.camera.res_y / 2 + range {
                 println!("x: {x}, y: {y}");
                 println!("color: {:?}", self.cast(&rays[0], true));
-            }
+            }*/
             let color = self.cast(&rays[0], false);
             buffer[y][x] = color;
         }

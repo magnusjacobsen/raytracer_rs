@@ -20,6 +20,7 @@ fn main() {
     pretty_print("t", &poly2); */
     let render = api::_sphere1(1.0, 4);
     //let render = api::_torus(1.5, 0.5);
+    //let render = api::_torus_phong(1.5, 0.5);
     //let render = api::_torus(0.2, 1.2);
     render.save_image("hello world");
 }

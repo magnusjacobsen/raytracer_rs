@@ -56,6 +56,9 @@ impl HitFunction {
                 } else {
                     vec![vec![]]
                 };
+                println!("a: {:?}", a);
+                println!("b: {:?}", b);
+                println!("c: {:?}", c);
 
                 Self {a, b, c, poly_vec, pdx, pdy, pdz, degree}
             },
@@ -98,7 +101,6 @@ impl HitFunction {
         if dis < 0.0 {
             None
         } else {
-
             let distances = solving::get_distances(a, b, dis);
             let ts = distances.iter().filter(|x| **x >= 0.0).collect::<Vec<_>>();
             if ts.is_empty() {
