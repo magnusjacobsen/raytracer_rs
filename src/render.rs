@@ -2,7 +2,7 @@
 use lodepng;
 use std::path::Path;
 
-use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hit_point::HitPoint}, lights::{point_light::PointLight}, shapes::base_shape::BaseShape};
+use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hit_point::HitPoint, vector::Vector}, lights::{point_light::PointLight}, shapes::base_shape::BaseShape};
 
 pub struct Render {
     pub scene: Scene,
@@ -14,8 +14,8 @@ impl Render {
         Self {scene, camera}
     }
 
-    pub fn cast(&self, ray: &Ray) -> Color {
-        if let Some((hit, shape)) = self.get_closest_hit(ray) {
+    pub fn cast(&self, ray: &Ray, print: bool) -> Color {
+        if let Some((hit, shape)) = self.get_closest_hit(ray, print) {
             let ambient_color = shape.material.ambient_color_with_light(&self.scene.ambient);
             
             // sum the light colors (and minus the shadow) for that hitpoint, and add them to the ambient color
@@ -33,7 +33,7 @@ impl Render {
     fn cast_shadow(&self, hit_point: &HitPoint, light: &PointLight) -> Color {
         let shadow_ray = light.get_shadow_ray(&hit_point);
 
-        if let Some((new_hit, _)) = self.get_closest_hit(&shadow_ray) {
+        if let Some((new_hit, _)) = self.get_closest_hit(&shadow_ray, false) {
             if new_hit.time < light.position.distance(&hit_point.point).magnitude {
                 return color::WHITE;
             }
@@ -41,11 +41,11 @@ impl Render {
         color::BLACK
     }
 
-    fn get_closest_hit(&self, ray: &Ray) -> Option<(HitPoint, &BaseShape)> {
+    fn get_closest_hit(&self, ray: &Ray, print: bool) -> Option<(HitPoint, &BaseShape)> {
         self.scene.shapes
             .iter()
             .fold(None, |prev, shape|
-                match shape.hit_function.run(&ray) {
+                match shape.hit_function.run(&ray, print) {
                     None        => prev,
                     Some(hit)   => 
                         if let Some((prev_hit, _)) = &prev {
@@ -96,12 +96,22 @@ impl Render {
 
         for (x, y) in coords {
             count += 1;
+            let rays = self.camera.create_rays(x, y);
+            if (x == self.camera.res_x / 2 && y == self.camera.res_y / 2) || (x == 0 && y == 0) {
+                //println!("x: {x}, y: {y}");
+                //println!("ray: {:?}", rays[0]);
+                println!("THIS IS IT!!!!!");
+            }
             if (count * 100) / total_pixels > last {
                 last = (count * 100) / total_pixels;
-                println!("{}%", last);
+                //println!("{}%", last);
+            };
+            let range = 3;
+            if x > self.camera.res_x / 2 - range && x < self.camera.res_x / 2 + range && y > self.camera.res_y / 2 - range && y < self.camera.res_y / 2 + range {
+                println!("x: {x}, y: {y}");
+                println!("color: {:?}", self.cast(&rays[0], true));
             }
-            let rays = self.camera.create_rays(x, y);
-            let color = self.cast(&rays[0]);
+            let color = self.cast(&rays[0], false);
             buffer[y][x] = color;
         }
 

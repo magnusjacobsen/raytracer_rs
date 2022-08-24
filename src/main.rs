@@ -18,7 +18,8 @@ fn main() {
     let poly2 = expr_to_poly(subst_with_ray(&expr), "t".into());
     pretty_print("t", &poly);
     pretty_print("t", &poly2); */
-    let render = api::_torus(1.0, 1.0);
+    let render = api::_sphere1(1.0, 4);
     //let render = api::_torus(1.5, 0.5);
+    //let render = api::_torus(0.2, 1.2);
     render.save_image("hello world");
 }

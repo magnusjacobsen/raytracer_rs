@@ -1,4 +1,4 @@
-use crate::core::{ray::Ray, hit_point::HitPoint};
+use crate::core::{ray::Ray, hit_point::HitPoint, vector::Vector};
 
 use super::{uni_poly::{IntSimpleExpr, self}, expr::Expr, solving};
 
@@ -29,15 +29,13 @@ impl HitFunction {
             0 => panic!("HitFunction: get me outta here"),
             1 => {
                 let mut poly = poly_vec.clone();
-                let a = if !poly.is_empty() && poly[0].0 == 1 {
-                    let res = poly[0].1.clone();
-                    poly.remove(0);
-                    res
+                let a = if !poly.is_empty() && poly.last().unwrap().0 == 1 {
+                    poly.pop().unwrap().1
                 } else {
                     vec![vec![]]
                 };
-                let b = if !poly.is_empty() && poly[0].0 == 0 {
-                    poly[0].1.clone()
+                let b = if !poly.is_empty() && poly.last().unwrap().0 == 0 {
+                    poly.pop().unwrap().1
                 } else {
                     vec![vec![]]
                 };
@@ -45,18 +43,16 @@ impl HitFunction {
                 Self {a, b, c: vec![vec![]], poly_vec, pdx, pdy, pdz, degree}
             },
             2 => {
+                println!("poly_vec: {:?}\n", poly_vec);
                 let mut poly = poly_vec.clone();
-                let a = poly[0].1.clone(); // we know it is degree 2, otherwise we wouldn't be here
-                poly.remove(0);
-                let b = if !poly.is_empty() && poly[0].0 == 1 {
-                    let res = poly[0].1.clone();
-                    poly.remove(0);
-                    res
+                let a = poly.pop().unwrap().1; // we know it is degree 2, otherwise we wouldn't be here
+                let b = if !poly.is_empty() && poly.last().unwrap().0 == 1 {
+                    poly.pop().unwrap().1
                 } else {
                     vec![vec![]]
                 };
-                let c = if !poly.is_empty() && poly[0].0 == 0 {
-                    poly[0].1.clone()
+                let c = if !poly.is_empty() && poly.last().unwrap().0 == 0 {
+                    poly.pop().unwrap().1
                 } else {
                     vec![vec![]]
                 };
@@ -85,24 +81,34 @@ impl HitFunction {
         }
     }
 
-    fn second_degree(&self, ray: &Ray) -> Option<HitPoint> {
+    fn second_degree(&self, ray: &Ray, print: bool) -> Option<HitPoint> {
         let ray_values = solving::get_ray_values(&ray);
         let a = uni_poly::solve_int_simple_expr(&self.a, ray_values);
         let b = uni_poly::solve_int_simple_expr(&self.b, ray_values);
         let c = uni_poly::solve_int_simple_expr(&self.c, ray_values);
         let dis = solving::discriminant(a, b, c);
+        
+        if print {
+            println!("ray_values: {:?}", ray_values);
+            println!("a: {:?}", self.a);
+            println!("b: {:?}", self.b);
+            println!("c: {:?}", self.c);
+            println!("a: {a}, b: {b}, c: {c}, dis: {dis}\n");
+        }
         if dis < 0.0 {
             None
         } else {
+
             let distances = solving::get_distances(a, b, dis);
             let ts = distances.iter().filter(|x| **x >= 0.0).collect::<Vec<_>>();
             if ts.is_empty() {
                 None
             } else {
-                let min_t = if ts[0] < ts[1] { *ts[0] } else { *ts[1] };
-                let point_time = ray.point_at_time(min_t);
+                println!("we god a hit");
+                let min_t = if ts.len() == 1 || ts[0] < ts[1] { ts[0] } else { ts[1] };
+                let point_time = ray.point_at_time(*min_t);
                 let normal = solving::normal_vector(&point_time, &self.pdx, &self.pdy, &self.pdz);
-                let hit = HitPoint::new(min_t, normal, &ray);
+                let hit = HitPoint::new(*min_t, normal, &ray);
                 Some(hit)
             }
         }
@@ -160,11 +166,11 @@ impl HitFunction {
         None
     }
 
-    pub fn run(&self, ray: &Ray) -> Option<HitPoint> {
+    pub fn run(&self, ray: &Ray, print: bool) -> Option<HitPoint> {
         match self.degree {
             0 => panic!("HitFunction::run: should not be here!"),
             1 => self.first_degree(ray),
-            2 => self.second_degree(ray),
+            2 => self.second_degree(ray, print),
             _ => self.higher_degree(ray),
         }
     }

@@ -15,7 +15,6 @@ impl HitPoint {
     pub fn new(time: f64, normal: Vector, ray: &Ray) -> Self {
         let point = ray.point_at_time(time);
         let escaped_point = point + normal * ESCPAE_SCALAR;
-
         let normal = if ray.direction * normal > 0.0 { 
             // not sure if this ever happens
             -normal 

@@ -4,7 +4,7 @@ use std::ops::{Add, Sub, Mul, Div, Neg, Rem};
 
 use super::point::Point;
 
-#[derive(Clone, Copy, PartialOrd)]
+#[derive(Clone, Copy, PartialOrd, Debug)]
 pub struct Vector {
     pub x: f64,
     pub y: f64,

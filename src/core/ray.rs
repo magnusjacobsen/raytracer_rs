@@ -3,6 +3,7 @@ use super::vector::Vector;
 
 use std::cmp::PartialEq;
 
+#[derive(Debug)]
 pub struct Ray {
     pub origin: Point,
     pub direction: Vector,
