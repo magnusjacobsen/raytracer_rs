@@ -1,5 +1,6 @@
 use crate::core::{point::Point, vector::Vector, ray::Ray};
 
+#[derive(Debug)]
 pub struct PinholeCamera {
     position: Point,
     //lookat: Point,
@@ -41,10 +42,9 @@ impl PinholeCamera {
 
     pub fn create_rays(&self, x: usize, y: usize) -> Vec<Ray> {
         //let samples = sampler.next_set(), let's just ignore sampling for now
-        let px = self.pw * (x as f64 - (self.res_x as f64) / 2.0);
-        let py = self.ph * (y as f64 - (self.res_y as f64) / 2.0);
+        let px = self.pw * (x as f64 - (self.res_x / 2) as f64);
+        let py = self.ph * (y as f64 - (self.res_y / 2) as f64);
         let direction = self.v * px + self.u * py - self.w_zoom;
-
         vec![Ray::new(self.position, direction.normalize())]
     }
 }

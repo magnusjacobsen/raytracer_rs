@@ -15,17 +15,15 @@ pub fn make_scene(shape: BaseShape) -> Scene {
 }
 
 pub fn _sphere1(r: f64, _num_samples: i32) -> Render {
-    /*let main_color = color::FUCHSIA;
+    let main_color = color::AQUA;
     let white = color::WHITE;
-    //let material = Matte::new(main_color, 1.0, main_color, 1.0);
-    let material = Phong::new(main_color, 0.2, main_color, 0.8, white, 0.7, 100);*/
-    // mkPhongMaterial aqua 0.2 aqua 0.8 white 0.7 100
-    let c = color::BLUE;
-    let material = Matte::new(c, 1.0, c, 1.0);
+    let material = Phong::new(main_color, 0.2, main_color, 0.8, white, 0.7, 100);
+    //let c = color::BLUE;
+    //let material = Matte::new(c, 1.0, c, 1.0);
 
     let r_r = r * r;
 
-    let s = solving::make_implicit(format!("x^2 + y^2 + z^2 + {r_r}"), bx!(material));
+    let s = solving::make_implicit(format!("x^2 + y^2 + z^2 - {r_r}"), bx!(material));
     let camera = PinholeCamera::new(
         Point::new(0.0, 0.0, 4.0),
         Point::new(0.0, 0.0, 0.0),
@@ -34,7 +32,7 @@ pub fn _sphere1(r: f64, _num_samples: i32) -> Render {
         4.0,
         3.0,
         1024,
-        764
+        768
     );
     let scene = make_scene(s);
     Render::new(scene, camera)
@@ -54,6 +52,7 @@ pub fn _torus(r: f64, rr: f64) -> Render {
         500, 
         500
     );
+
     let scene = make_scene(s);
     Render::new(scene, camera)
 }

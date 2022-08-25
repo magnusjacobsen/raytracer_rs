@@ -40,8 +40,8 @@ impl Vector {
     fn cross_product(&self, other: &Self) -> Self {
         Self::new(
             self.y * other.z - self.z * other.y,
-            self.z * other.x - self.x - other.z,
-            self.x * other.y - self.y - other.x,
+            self.z * other.x - self.x * other.z,
+            self.x * other.y - self.y * other.x,
         )
     }
 
@@ -106,7 +106,7 @@ impl Add for Vector {
     fn add(self, rhs: Self) -> Self::Output {
         Self::new(
             self.x + rhs.x,
-            self.y + rhs.x,
+            self.y + rhs.y,
             self.z + rhs.z,
         )
     }

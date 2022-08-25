@@ -54,9 +54,6 @@ impl Material for Phong {
             };
 
             let direction = lc * dp;
-            //println!("dir: {:?}", direction);
-            //println!("diff: {:?}", self.diffuse);
-            //println!("spec: {:?}\n", specular);
             (self.diffuse + specular) * direction
         } else {
             color::BLACK

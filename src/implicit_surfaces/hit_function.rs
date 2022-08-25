@@ -1,4 +1,4 @@
-use crate::core::{ray::Ray, hit_point::HitPoint, vector::Vector};
+use crate::core::{ray::Ray, hit_point::HitPoint};
 
 use super::{uni_poly::{IntSimpleExpr, self}, expr::Expr, solving};
 
@@ -43,7 +43,6 @@ impl HitFunction {
                 Self {a, b, c: vec![vec![]], poly_vec, pdx, pdy, pdz, degree}
             },
             2 => {
-                println!("poly_vec: {:?}\n", poly_vec);
                 let mut poly = poly_vec.clone();
                 let a = poly.pop().unwrap().1; // we know it is degree 2, otherwise we wouldn't be here
                 let b = if !poly.is_empty() && poly.last().unwrap().0 == 1 {
@@ -56,9 +55,6 @@ impl HitFunction {
                 } else {
                     vec![vec![]]
                 };
-                println!("a: {:?}", a);
-                println!("b: {:?}", b);
-                println!("c: {:?}", c);
 
                 Self {a, b, c, poly_vec, pdx, pdy, pdz, degree}
             },
@@ -84,33 +80,26 @@ impl HitFunction {
         }
     }
 
-    fn second_degree(&self, ray: &Ray, print: bool) -> Option<HitPoint> {
+    fn second_degree(&self, ray: &Ray) -> Option<HitPoint> {
         let ray_values = solving::get_ray_values(&ray);
         let a = uni_poly::solve_int_simple_expr(&self.a, ray_values);
         let b = uni_poly::solve_int_simple_expr(&self.b, ray_values);
         let c = uni_poly::solve_int_simple_expr(&self.c, ray_values);
         let dis = solving::discriminant(a, b, c);
         
-        if print {
-            println!("ray_values: {:?}", ray_values);
-            println!("a: {:?}", self.a);
-            println!("b: {:?}", self.b);
-            println!("c: {:?}", self.c);
-            println!("a: {a}, b: {b}, c: {c}, dis: {dis}\n");
-        }
         if dis < 0.0 {
             None
         } else {
             let distances = solving::get_distances(a, b, dis);
-            let ts = distances.iter().filter(|x| **x >= 0.0).collect::<Vec<_>>();
+            let mut ts = distances.iter().filter(|x| **x >= 0.0).cloned().collect::<Vec<_>>();
+            ts.sort_by(|a,b| a.partial_cmp(&b).unwrap());
             if ts.is_empty() {
                 None
             } else {
-                println!("we god a hit");
-                let min_t = if ts.len() == 1 || ts[0] < ts[1] { ts[0] } else { ts[1] };
-                let point_time = ray.point_at_time(*min_t);
+                let t = ts[0];
+                let point_time = ray.point_at_time(t);
                 let normal = solving::normal_vector(&point_time, &self.pdx, &self.pdy, &self.pdz);
-                let hit = HitPoint::new(*min_t, normal, &ray);
+                let hit = HitPoint::new(t, normal, &ray);
                 Some(hit)
             }
         }
@@ -135,9 +124,7 @@ impl HitFunction {
         let derivative = uni_poly::uni_poly_derivative(&up);
 
         let sturm_seq = uni_poly::sturm_seq(&up, &derivative);
-        //println!("up: {:?}", up);
-        //println!("derivative: {:?}", derivative);
-        //println!("sturm_seq: {:?}\n", sturm_seq);
+
         for _ in 0..iterations {
             if let Some((int_lo, int_hi)) = uni_poly::get_interval(&sturm_seq, lo, hi, max_depth) {
                 lo = int_lo;
@@ -168,11 +155,11 @@ impl HitFunction {
         None
     }
 
-    pub fn run(&self, ray: &Ray, print: bool) -> Option<HitPoint> {
+    pub fn run(&self, ray: &Ray) -> Option<HitPoint> {
         match self.degree {
             0 => panic!("HitFunction::run: should not be here!"),
             1 => self.first_degree(ray),
-            2 => self.second_degree(ray, print),
+            2 => self.second_degree(ray),
             _ => self.higher_degree(ray),
         }
     }

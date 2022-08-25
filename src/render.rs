@@ -2,7 +2,7 @@
 use lodepng;
 use std::path::Path;
 
-use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hit_point::HitPoint, vector::Vector}, lights::{point_light::PointLight}, shapes::base_shape::BaseShape};
+use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hit_point::HitPoint}, lights::{point_light::PointLight}, shapes::base_shape::BaseShape};
 
 pub struct Render {
     pub scene: Scene,
@@ -14,8 +14,8 @@ impl Render {
         Self {scene, camera}
     }
 
-    pub fn cast(&self, ray: &Ray, print: bool) -> Color {
-        if let Some((hit, shape)) = self.get_closest_hit(ray, print) {
+    pub fn cast(&self, ray: &Ray) -> Color {
+        if let Some((hit, shape)) = self.get_closest_hit(ray) {
             let ambient_color = shape.material.ambient_color_with_light(&self.scene.ambient);
             
             // sum the light colors (and minus the shadow) for that hitpoint, and add them to the ambient color
@@ -33,7 +33,7 @@ impl Render {
     fn cast_shadow(&self, hit_point: &HitPoint, light: &PointLight) -> Color {
         let shadow_ray = light.get_shadow_ray(&hit_point);
 
-        if let Some((new_hit, _)) = self.get_closest_hit(&shadow_ray, false) {
+        if let Some((new_hit, _)) = self.get_closest_hit(&shadow_ray) {
             if new_hit.time < light.position.distance(&hit_point.point).magnitude {
                 return color::WHITE;
             }
@@ -41,11 +41,11 @@ impl Render {
         color::BLACK
     }
 
-    fn get_closest_hit(&self, ray: &Ray, print: bool) -> Option<(HitPoint, &BaseShape)> {
+    fn get_closest_hit(&self, ray: &Ray) -> Option<(HitPoint, &BaseShape)> {
         self.scene.shapes
             .iter()
             .fold(None, |prev, shape|
-                match shape.hit_function.run(&ray, print) {
+                match shape.hit_function.run(&ray) {
                     None        => prev,
                     Some(hit)   => 
                         if let Some((prev_hit, _)) = &prev {
@@ -71,52 +71,28 @@ impl Render {
             .flatten()
             .collect::<Vec<(usize, usize)>>();
 
-        let mut buffer = vec![vec![color::WHITE; self.camera.res_x]; self.camera.res_y];
+        let mut buffer = vec![vec![color::BLACK; self.camera.res_x]; self.camera.res_y];
 
         let total_pixels = (self.camera.res_y * self.camera.res_x) as i32;
         let mut count = 0;
         let mut last= -1;
 
-        /*coords
-        .iter()
-        .for_each(|(x, y)| {
-            let rays = self.camera.create_rays(*x, *y);
-            let color = rays
-                .iter()
-                .fold(color::BLACK, |color, ray| {
-                    count += 1;
-                    if (count * 100) / total_pixels > last {
-                        last = (count * 100) / total_pixels;
-                        println!("{}%", last);
-                    }
-                    color + self.cast(ray)
-                }); rays.len() as f64;
-            buffer[*y][*x] = color
-        });*/
-
         for (x, y) in coords {
             count += 1;
             let rays = self.camera.create_rays(x, y);
-            if (x == self.camera.res_x / 2 && y == self.camera.res_y / 2) || (x == 0 && y == 0) {
-                //println!("x: {x}, y: {y}");
-                //println!("ray: {:?}", rays[0]);
-                //println!("THIS IS IT!!!!!");
-            }
-            if (count * 100) / total_pixels > last {
-                last = (count * 100) / total_pixels;
-                println!("{}%", last);
-            };
-            /*let range = 3;
-            if x > self.camera.res_x / 2 - range && x < self.camera.res_x / 2 + range && y > self.camera.res_y / 2 - range && y < self.camera.res_y / 2 + range {
-                println!("x: {x}, y: {y}");
-                println!("color: {:?}", self.cast(&rays[0], true));
-            }*/
-            let color = self.cast(&rays[0], false);
-            buffer[y][x] = color;
-        }
 
-        let sum = buffer.iter().fold(0, |acc, x| acc + x.iter().fold(0, |acc, color| acc + color.to_u8_vec().iter().map(|z| *z as i64).sum::<i64>()));
-        println!("sum: {}", sum);
+            let percentage = (count * 100) / total_pixels;
+            if percentage > last {
+                last = percentage;
+                let per_50 = percentage / 2;
+                let progress = (0..per_50).map(|_| "▓").chain((0..(50 - per_50)).map(|_| "░")).collect::<Vec<_>>().join("");
+                print!("\r{} {}%", progress, last);
+            };
+
+            let color = self.cast(&rays[0]);
+            buffer[self.camera.res_y - (y + 1)][x] = color;
+        }
+        println!("");
 
         buffer.into_iter()
             .map(|x| x.into_iter()

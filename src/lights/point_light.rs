@@ -2,7 +2,7 @@ use crate::core::{color::Color, point::Point, vector::Vector, ray::Ray, hit_poin
 
 use super::Light;
 
-
+#[derive(Debug)]
 pub struct PointLight {
     color: Color,
     intensity: f64,
@@ -21,7 +21,7 @@ impl PointLight {
     pub fn get_shadow_ray(&self, hit_point: &HitPoint) -> Ray {
         let p = hit_point.escaped_point.clone();
         let direction = (self.position - p).normalize();
-        
+
         Ray::new(p, direction)
     }
 }
