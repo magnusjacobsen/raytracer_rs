@@ -24,6 +24,8 @@ impl Phong {
         
         let diffuse = (matte_color * matte_coefficient) * PI_DIVIDED;
 
+        println!("diff: {:?}", diffuse);
+
         Self {
             ambient_color, ambient_coefficient, specular_color, specular_coefficient, specular_exponent, diffuse,
         }
@@ -38,15 +40,15 @@ impl Material for Phong {
     fn bounce(&self, hit_point: &HitPoint, light: &PointLight, ray: &Ray) -> Color {
         let ld = light.get_direction_from_point(&hit_point);
         let n = hit_point.normal.clone();
-        let r1 = (-ld) + n * (2.0 * (n * ld));
-        let rd = ray.direction.normalize();
-
         let dp = n * ld;
+        let r1 = (-ld) + n * (2.0 * dp);
+        let rd = ray.direction.normalize();
         let lc = light.get_color();
 
         // determine the colour
         if dp > 0.0 {
             let r1_neg_rd = r1 * (-rd);
+
             let specular = if r1_neg_rd > 0.0 {
                 self.specular_color * self.specular_coefficient * r1_neg_rd.powi(self.specular_exponent)
             } else {
@@ -54,7 +56,7 @@ impl Material for Phong {
             };
 
             let direction = lc * dp;
-            (self.diffuse + specular) * direction
+            (self.diffuse * 2.0 + specular) * direction
         } else {
             color::BLACK
         }

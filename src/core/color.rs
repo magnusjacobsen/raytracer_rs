@@ -39,19 +39,6 @@ impl Color {
         }
     }
 
-    /*fn merge(&self, w: f64) -> Color {
-        if w < 0.0 || w > 1.0 {
-            panic!("Color::merge: w i to small or too big");
-        } else {
-            let dw = 1.0 - w;
-            Color::new(w * self.r + dw * self.r, w * self.g + dw * self.b, w * self.b + dw * self.b)
-        }
-    }*/
-
-    /*fn average(&self) -> f64 {
-        (self.r + self.g + self.b) * 3.0
-    }*/
-
     pub fn to_u8_vec(&self) -> Vec<u8> {
         vec![
             (self.r * 255.0) as u8,
@@ -59,8 +46,6 @@ impl Color {
             (self.b * 255.0) as u8,
         ]
     }
-
-
 }
 
 /*

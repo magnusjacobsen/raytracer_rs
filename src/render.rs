@@ -1,6 +1,6 @@
 //use rayon::prelude::*;
 use lodepng;
-use std::path::Path;
+use std::{path::Path, io::{stdout, Write}};
 
 use crate::{scene::Scene, camera::pinhole::PinholeCamera, core::{color::{Color, self}, ray::Ray, hit_point::HitPoint}, lights::{point_light::PointLight}, shapes::base_shape::BaseShape};
 
@@ -20,10 +20,10 @@ impl Render {
             
             // sum the light colors (and minus the shadow) for that hitpoint, and add them to the ambient color
             self.scene.lights.iter()
-                .fold(ambient_color, |color, light| {
+                .fold(ambient_color * 6.0, |color, light| {
                     let light_color = shape.material.bounce(&hit, &light, &ray);
                     let shadow_color = self.cast_shadow(&hit, light);
-                    color + (light_color - shadow_color)
+                    color + (light_color - shadow_color) * 1.2
                 })
         } else {
             self.scene.background
@@ -87,6 +87,7 @@ impl Render {
                 let per_50 = percentage / 2;
                 let progress = (0..per_50).map(|_| "▓").chain((0..(50 - per_50)).map(|_| "░")).collect::<Vec<_>>().join("");
                 print!("\r{} {}%", progress, last);
+                stdout().lock().flush().unwrap();
             };
 
             let color = self.cast(&rays[0]);

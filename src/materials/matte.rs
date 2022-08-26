@@ -14,6 +14,7 @@ pub struct Matte {
 impl Matte {
     pub fn new(ambient_color: Color, ambient_coefficient: f64, matte_color: Color, matte_coefficient: f64) -> Self {
         let diffuse = (matte_color * matte_coefficient) * PI_DIVIDED;
+        
         Self {
             ambient_color, ambient_coefficient, diffuse,
         }

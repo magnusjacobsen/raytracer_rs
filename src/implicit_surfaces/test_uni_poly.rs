@@ -6,7 +6,6 @@ pub mod t {
 
     use crate::implicit_surfaces::expr::{parse_string};
     use crate::implicit_surfaces::poly::{expr_to_poly, poly_as_list};
-    use crate::implicit_surfaces::simple_expr::expr_to_simple_expr;
     use crate::implicit_surfaces::uni_poly::{uni_poly_derivative, self, to_int_simple_expr_vec, UniPoly, sturm_seq};
 
     fn to_uni_poly(s: String, v: &str, ray_values: [f64; 6]) -> UniPoly {
@@ -55,9 +54,6 @@ pub mod t {
     #[test]
     fn parse_sturm_seq() -> Result<()> {
         let input = "x^4 + 2x^2 + 4x + 1".to_string();
-        let parsed = parse_string(input.clone());
-        let se = expr_to_simple_expr(parsed.clone());
-        let poly = expr_to_poly(parsed, "x");
 
         let unipoly = to_uni_poly(input, "x", [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
         let result = sturm_seq(&unipoly, &uni_poly_derivative(&unipoly));
